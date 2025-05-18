@@ -3,7 +3,7 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface ProviderCardProps {
-  id?: string;
+  id?: number; // Modificado: ahora es number en lugar de string
   imageUri: string;
   name: string;
   rating?: number;
@@ -33,10 +33,11 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
 }) => {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      {/* ID Badge */}
-      {id && (
-        <View style={styles.idBadge}>
-          <Text style={styles.idText}>{id}</Text>
+      {/* Rating Badge */}
+      {rating > 0 && (
+        <View style={styles.ratingBadge}>
+          <Ionicons name="star" size={14} color="#FFD700" />
+          <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
         </View>
       )}
       
@@ -115,29 +116,28 @@ const styles = StyleSheet.create({
     elevation: 2,
     position: 'relative',
   },
-  idBadge: {
+  ratingBadge: {
     position: 'absolute',
-    top: '50%',
-    left: 15,
-    marginTop: -15,
+    top: 10,
+    right: 10,
     backgroundColor: '#F5F5F5',
     borderRadius: 4,
-    zIndex: 1,
-    width: 30,
-    height: 30,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    zIndex: 1,
   },
-  idText: {
+  ratingText: {
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
     color: '#555',
+    marginLeft: 4,
   },
   headerRow: {
     flexDirection: 'row',
     marginBottom: 6,
     alignItems: 'center',
-    paddingLeft: 40, // Espacio para el ID badge
   },
   avatar: {
     width: 46,

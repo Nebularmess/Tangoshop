@@ -1,24 +1,31 @@
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 interface HeaderProps {
   title?: string;
   subtitle?: string;
   children?: React.ReactNode;
-  backgroundColor?: string;
+
 }
 
-const Header: React.FC<HeaderProps> = ({ title, subtitle, children, backgroundColor }) => {
+const Header: React.FC<HeaderProps> = ({ title, subtitle, children, }) => {
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: backgroundColor || '#0066CC' }]}>
-      <View style={styles.container}>
-        <View style={styles.titleContainer}>
-          {title && <Text style={styles.title}>{title}</Text>}
-          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+    <ImageBackground
+      source={require('../../assets/images/bgHeader.jpeg')} // Asegúrate de tener esta imagen
+      style={styles.backgroundImage}
+      resizeMode="cover"
+      blurRadius={20}
+    >
+      <SafeAreaView style={[styles.safeArea]}>
+        <View style={styles.container}>
+          <View style={styles.titleContainer}>
+            {title && <Text style={styles.title}>{title}</Text>}
+            {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+          </View>
+          {children && <View style={styles.childrenContainer}>{children}</View>}
         </View>
-        {children && <View style={styles.childrenContainer}>{children}</View>}
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 };
 
@@ -47,6 +54,10 @@ const styles = StyleSheet.create({
   },
   childrenContainer: {
     marginTop: 8,
+  },
+    backgroundImage: {
+    width: '100%',
+    paddingTop: 16,
   },
 });
 
