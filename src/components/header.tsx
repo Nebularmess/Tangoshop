@@ -11,7 +11,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ title, subtitle, children, }) => {
   return (
     <ImageBackground
-      source={require('../../assets/images/bgHeader.jpeg')} // Asegúrate de tener esta imagen
+      source={require('../../src/assets/images/bgHeader.jpeg')} // Asegúrate de tener esta imagen
       style={styles.backgroundImage}
       resizeMode="cover"
       blurRadius={20}

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import GenericList from './components/genericList';
-import Header from './components/header';
-import NavBar from './components/navBar';
-import ProviderCard from './components/ProviderCard';
-import SearchBar from './components/searchBar';
+import GenericList from '../../../components/genericList';
+import Header from '../../../components/header';
+import NavBar from '../../../components/navBar';
+import ProviderCard from '../../../components/ProviderCard';
+import SearchBar from '../../../components/searchBar';
 
 // Datos de ejemplo para proveedores
 const proveedoresEjemplo = [
@@ -139,7 +139,7 @@ const Index = () => {
   const NoResultsComponent = () => (
     <View style={styles.noResultsContainer}>
       <Text style={styles.noResultsText}>
-        No se encontraron proveedores que coincidan con "{searchQuery}"
+        `No se encontraron proveedores que coincidan con ${searchQuery}`
       </Text>
     </View>
   );

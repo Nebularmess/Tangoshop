@@ -3,11 +3,11 @@ import { createStackNavigator } from '@react-navigation/stack';
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import Buscador from '../Buscador';
-import Configuracion from '../Configuracion';
-import Favoritos from '../Favoritos';
-import Index from '../index';
-import Proveedores from '../Proveedores';
+import Buscador from '../app/(index)/(home)/Buscador';
+import Configuracion from '../app/(index)/(home)/Configuracion';
+import Favoritos from '../app/(index)/(home)/Favoritos';
+import Index from '../app/(index)/(home)/index';
+import Proveedores from '../app/(index)/(home)/Proveedores';
 import NavBar from './navBar';
 
 const Stack = createStackNavigator();
