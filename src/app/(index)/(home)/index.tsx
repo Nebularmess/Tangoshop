@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
-import NavBar from '../../../components/navBar';
 import ProviderCard from '../../../components/ProviderCard';
 import SearchBar from '../../../components/searchBar';
 
@@ -76,15 +75,11 @@ interface Proveedor {
   email: string;
 }
 
-// Modificar para usar los mismos nombres de pantalla que en NavBar
-type Screen = 'index' | 'Proveedores' | 'Buscador' | 'Favoritos' | 'Configuracion';
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [proveedores] = useState<Proveedor[]>(proveedoresEjemplo);
   const [proveedoresFiltrados, setProveedoresFiltrados] = useState<Proveedor[]>(proveedores);
-  // Cambiado el estado inicial para coincidir con el NavBar
-  const [activeScreen, setActiveScreen] = useState<Screen>('index');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
@@ -145,11 +140,10 @@ const Index = () => {
   );
 
 
-  const renderScreen = () => {
-    switch (activeScreen) {
-      case 'index':
-        return (
-          <>
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <>
             <Header 
               title="Proveedores" 
               subtitle="¿Qué estás buscando hoy?"
@@ -173,69 +167,7 @@ const Index = () => {
               emptyText={`No se encontraron proveedores que coincidan con "${searchQuery}"`}
             />
           </>
-        );
-      case 'Buscador':
-        return (
-          <View style={styles.screenContainer}>
-            <Text style={styles.screenTitle}>Búsqueda Avanzada</Text>
-            <SearchBar
-              placeholder="Buscar por nombre, categoría o ciudad"
-              value={searchQuery}
-              onChangeText={handleSearchChange}
-            />
-          </View>
-        );
-      case 'Proveedores': // Cambiado de 'list' a 'provider'
-        return (
-          <>
-            <Header 
-              title="Listado Completo" 
-              subtitle="Todos los proveedores disponibles"
-            />
-            <GenericList
-              data={proveedores}
-              renderItem={renderProveedor}
-              keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={styles.listContent}
-              onRefresh={handleRefresh}
-              refreshing={isRefreshing}
-            />
-          </>
-        );
-      case 'Favoritos':
-        return (
-          <>
-            <Header 
-              title="Favoritos" 
-              subtitle="Tus proveedores guardados"
-            />
-            <GenericList
-              data={[]} // Lista vacía para demostrar el emptyComponent
-              renderItem={renderProveedor}
-              keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={styles.listContent}
-              emptyText="No tienes proveedores favoritos"
-            />
-          </>
-        );
-      case 'Configuracion':
-        return (
-          <View style={styles.screenContainer}>
-            <Text style={styles.screenTitle}>Configuración</Text>
-            <Text style={styles.screenText}>Ajustes de la aplicación.</Text>
-          </View>
-        );
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {renderScreen()}
       </View>
-      <NavBar activeScreen={activeScreen} />
     </SafeAreaView>
   );
 };
