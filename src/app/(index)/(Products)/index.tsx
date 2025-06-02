@@ -1,10 +1,10 @@
-
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import ProductCard from '../../../components/ProductCard';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
-import SearchBar from '../../../components/searchBar';
+import FilterPopup from '../../../components/products/FilterPopUp'; // Importa el nuevo componente
+import ProductCard from '../../../components/products/ProductCard';
+import SearchBar from '../../../components/products/productsSearchBar';
 import { productosEjemplo } from '../../../utils/scripts';
 
 interface Producto {
@@ -22,20 +22,26 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [productos] = useState<Producto[]>(productosEjemplo);
   const [productosFiltrados, setProductosFiltrados] = useState<Producto[]>(productos);
-  // Cambiado el estado inicial para coincidir con el NavBar
   const [activeScreen] = useState(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  
+  // Nuevo estado para controlar el popup de filtros
+  const [isFilterPopupVisible, setIsFilterPopupVisible] = useState<boolean>(false);
 
   // Efecto para filtrar productos cuando cambia la búsqueda
   useEffect(() => {
     if (searchQuery.trim() === '') {
-      // Si la búsqueda está vacía, mostrar todos los productos
       setProductosFiltrados(productos);
     } else {
-      // Filtrar por nombre ignorando mayúsculas/minúsculas
-      const filtrados = productos.filter(producto => 
-        producto.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const propertiesToSearch: (keyof Producto)[] = ['name', 'category', 'description', 'subcategory'];
+      const filtrados = productos.filter(producto =>
+        propertiesToSearch.some(prop => {
+          const value = producto[prop];
+          return value !== undefined &&
+                 value !== null &&
+                 value.toString().toLowerCase().includes(searchQuery.toLowerCase());
+        })
       );
       setProductosFiltrados(filtrados);
     }
@@ -44,6 +50,85 @@ const Index = () => {
   // Función para manejar el cambio en el texto de búsqueda
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
+  };
+
+  // Función para abrir el popup de filtros
+  const handleFilterPress = () => {
+    setIsFilterPopupVisible(true);
+  };
+
+  // Función para cerrar el popup de filtros
+  const handleCloseFilterPopup = () => {
+    setIsFilterPopupVisible(false);
+  };
+
+  // Función para aplicar filtros (puedes expandir esta lógica)
+  const handleApplyFilters = (filters: any) => {
+    console.log('Filtros aplicados:', filters);
+    
+    let productosFiltradosTemp = productos;
+    
+    // Aplicar filtro de búsqueda si existe
+    if (searchQuery.trim() !== '') {
+      const propertiesToSearch: (keyof Producto)[] = ['name', 'category', 'description', 'subcategory'];
+      productosFiltradosTemp = productosFiltradosTemp.filter(producto =>
+        propertiesToSearch.some(prop => {
+          const value = producto[prop];
+          return value !== undefined &&
+                 value !== null &&
+                 value.toString().toLowerCase().includes(searchQuery.toLowerCase());
+        })
+      );
+    }
+    
+    // Aplicar filtro de categorías
+    if (filters.categories && filters.categories.length > 0) {
+      productosFiltradosTemp = productosFiltradosTemp.filter(producto =>
+        filters.categories.some((cat: string) => 
+          producto.category.toLowerCase().includes(cat.toLowerCase()) ||
+          producto.subcategory.toLowerCase().includes(cat.toLowerCase())
+        )
+      );
+    }
+    
+    // Aplicar filtro de precios
+    if (filters.priceRanges && filters.priceRanges.length > 0) {
+      productosFiltradosTemp = productosFiltradosTemp.filter(producto => {
+        return filters.priceRanges.some((range: string) => {
+          switch (range) {
+            case '0-50':
+              return producto.price >= 0 && producto.price <= 50;
+            case '50-100':
+              return producto.price > 50 && producto.price <= 100;
+            case '100+':
+              return producto.price > 100;
+            default:
+              return true;
+          }
+        });
+      });
+    }
+    
+    // Aplicar filtro de rating
+    if (filters.ratings && filters.ratings.length > 0) {
+      productosFiltradosTemp = productosFiltradosTemp.filter(producto => {
+        return filters.ratings.some((rating: string) => {
+          switch (rating) {
+            case '5':
+              return producto.rating === 5;
+            case '4+':
+              return producto.rating >= 4;
+            case '3+':
+              return producto.rating >= 3;
+            default:
+              return true;
+          }
+        });
+      });
+    }
+    
+    setProductosFiltrados(productosFiltradosTemp);
+    setIsFilterPopupVisible(false);
   };
 
   // Función para renderizar un producto
@@ -64,8 +149,6 @@ const Index = () => {
   // Función para refrescar los datos
   const handleRefresh = () => {
     setIsRefreshing(true);
-    // Aquí normalmente harías una llamada a API para obtener datos frescos
-    // Simulamos un delay para mostrar el refreshing
     setTimeout(() => {
       setIsRefreshing(false);
     }, 1500);
@@ -75,13 +158,13 @@ const Index = () => {
   const NoResultsComponent = () => (
     <View style={styles.noResultsContainer}>
       <Text style={styles.noResultsText}>
-        No se encontraron productos que coincidan con "{searchQuery}"
+        No se encontraron productos que coincidan con &quot;{searchQuery}&quot;
       </Text>
     </View>
   );
 
   const renderScreen = () => {
-    if(activeScreen) {
+    if (activeScreen) {
       return (
         <>
           <Header 
@@ -92,6 +175,7 @@ const Index = () => {
               placeholder="Buscar producto"
               value={searchQuery}
               onChangeText={handleSearchChange}
+              onFilterPress={handleFilterPress} // Pasamos la función al SearchBar
             />
           </Header>
           
@@ -105,6 +189,13 @@ const Index = () => {
             onRefresh={handleRefresh}
             refreshing={isRefreshing}
             emptyText={`No se encontraron productos que coincidan con "${searchQuery}"`}
+          />
+
+          {/* Popup de filtros */}
+          <FilterPopup
+            visible={isFilterPopupVisible}
+            onClose={handleCloseFilterPopup}
+            onApplyFilters={handleApplyFilters}
           />
         </>
       );
