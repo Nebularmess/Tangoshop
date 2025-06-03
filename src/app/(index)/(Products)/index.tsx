@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import GenericList from '../../../components/genericList';
@@ -131,6 +132,7 @@ const Index = () => {
     setIsFilterPopupVisible(false);
   };
 
+  const router = useRouter();
   // Función para renderizar un producto
   const renderProducto = (producto: Producto) => (
     <ProductCard
@@ -142,7 +144,7 @@ const Index = () => {
       subcategory={producto.subcategory}
       description={producto.description}
       price={producto.price}
-      onPress={() => console.log(`Producto seleccionado: ${producto.name}`)}
+      onPress={() => {try{ router.push(`/${producto.id}`)}catch(e){console.error(e)}}} 
     />
   );
 
@@ -191,7 +193,7 @@ const Index = () => {
             emptyText={`No se encontraron productos que coincidan con "${searchQuery}"`}
           />
 
-          {/* Popup de filtros */}
+          
           <FilterPopup
             visible={isFilterPopupVisible}
             onClose={handleCloseFilterPopup}
