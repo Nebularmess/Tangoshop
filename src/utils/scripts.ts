@@ -62,6 +62,7 @@ export const productosEjemplo = [
         subcategory: 'Celular',
         description: 'Descripción del producto 1',
         price: 100,
+        sellers_id: 48,
         
     },
     {
@@ -73,6 +74,7 @@ export const productosEjemplo = [
         subcategory: 'Computadora',
         description: 'Descripción del producto 2',
         price: 200,
+        sellers_id: 49,
         
     },
     {
@@ -84,7 +86,7 @@ export const productosEjemplo = [
         subcategory: 'Tablet',
         description: 'Descripción del producto 3',
         price: 300,
-        
+        sellers_id: 50,
     }
 ];
 module.exports = { proveedoresEjemplo, productosEjemplo };
