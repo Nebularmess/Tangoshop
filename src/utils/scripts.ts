@@ -63,6 +63,7 @@ export const productosEjemplo = [
         description: 'Descripción del producto 1',
         price: 100,
         sellers_id: 48,
+        favorite: false
         
     },
     {
@@ -75,7 +76,7 @@ export const productosEjemplo = [
         description: 'Descripción del producto 2',
         price: 200,
         sellers_id: 49,
-        
+        favorite: false
     },
     {
         id: 3,
@@ -87,6 +88,7 @@ export const productosEjemplo = [
         description: 'Descripción del producto 3',
         price: 300,
         sellers_id: 50,
+        favorite:false
     }
 ];
 module.exports = { proveedoresEjemplo, productosEjemplo };

@@ -17,11 +17,12 @@ interface Producto {
   subcategory: string;
   description: string;
   price: number;
+  favorite: boolean;
 }
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [productos] = useState<Producto[]>(productosEjemplo);
+  const [productos, setProductos] = useState<Producto[]>(productosEjemplo);
   const [productosFiltrados, setProductosFiltrados] = useState<Producto[]>(productos);
   const [activeScreen] = useState(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -47,6 +48,16 @@ const Index = () => {
       setProductosFiltrados(filtrados);
     }
   }, [searchQuery, productos]);
+
+  const handleToggleFavorite = (productId: number) => {
+    setProductos(prevProductos => 
+      prevProductos.map(producto => 
+        producto.id === productId 
+          ? { ...producto, favorite: !producto.favorite }
+          : producto
+      )
+    );
+  };
 
   // Función para manejar el cambio en el texto de búsqueda
   const handleSearchChange = (text: string) => {
@@ -144,7 +155,9 @@ const Index = () => {
       subcategory={producto.subcategory}
       description={producto.description}
       price={producto.price}
+      favorite={producto.favorite}
       onPress={() => {try{ router.push(`/${producto.id}`)}catch(e){console.error(e)}}} 
+      onToggleFavorite={handleToggleFavorite}
     />
   );
 

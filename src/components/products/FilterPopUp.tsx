@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    Dimensions,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface FilterState {
@@ -116,7 +116,7 @@ const FilterPopup: React.FC<FilterPopupProps> = ({
                   styles.optionText,
                   selectedFilters.categories.includes('Electrónicos') && styles.selectedOptionText
                 ]}>
-                  Electrónicos
+                  Tecnología
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity 

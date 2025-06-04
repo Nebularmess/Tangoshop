@@ -11,7 +11,9 @@ interface ProductCardProps {
   subcategory: string;
   description: string;
   price: number;
+  favorite?: boolean;
   onPress: () => void;
+  onToggleFavorite: (id: number) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -23,11 +25,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
   subcategory,
   description,
   price,
+  favorite,
   onPress,
+  onToggleFavorite,
 }) => {
   // Función para formatear el precio
   const formatPrice = (price: number) => {
     return `$${price.toLocaleString('es-AR')}`;
+  };
+  const handleToggleFavorite = () => {
+    onToggleFavorite(id);
   };
 
   return (
@@ -61,8 +68,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
       </View>
 
       {/* Icono de favorito */}
-      <TouchableOpacity style={styles.favoriteButton} onPress={() => console.log('Favorito:', name)}>
-        <Ionicons name="heart-outline" size={20} color="#666" />
+      <TouchableOpacity style={styles.favoriteButton} onPress={handleToggleFavorite}>
+        <Ionicons name={favorite? "heart" :"heart-outline"} size={20} color={favorite? "#FF4444" : "#666"} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
