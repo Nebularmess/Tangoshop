@@ -59,7 +59,7 @@ export default function ProductoDetalle() {
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.favoriteButton}>
-          <Ionicons name="heart-outline" size={24} color="white" />
+          <Ionicons name={producto.favorite? "heart" :"heart-outline"} size={24} color={producto.favorite ? "#FF4444" : "#666"} />
         </TouchableOpacity>
       </View>
 
