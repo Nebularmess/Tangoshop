@@ -5,6 +5,8 @@ import Header from '../../../components/header';
 import ProviderCard from '../../../components/ProviderCard';
 import SearchBar from '../../../components/searchBar';
 
+import usefetch from "../../../hooks/useFetch";
+
 // Datos de ejemplo para proveedores
 const proveedoresEjemplo = [
   {
@@ -75,13 +77,34 @@ interface Proveedor {
   email: string;
 }
 
+interface resApi {
+  path: string;
+  method: string;
+  error?: any;
+  items: object[];
+}
+
 
 const Index = () => {
+  const { data, execute, error, loading } = usefetch <resApi>();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [proveedores] = useState<Proveedor[]>(proveedoresEjemplo);
   const [proveedoresFiltrados, setProveedoresFiltrados] = useState<Proveedor[]>(proveedores);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  useEffect(() => {
+    execute(
+      {
+        method: 'post',
+        url: 'https://realnodegraphapi-production.up.railway.app/api/findObjects',
+        data: []
+        //la data es el body de la query y va la consulta al back en fomato de query mongo, agregation framework
+      }
+    )
+    
+  }, [])
+  console.log(data?.items)
 
   // Efecto para filtrar proveedores cuando cambia la búsqueda
   useEffect(() => {
