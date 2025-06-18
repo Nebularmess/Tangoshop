@@ -90,7 +90,7 @@ const Index = () => {
       setProveedoresFiltrados(proveedores);
     } else {
       // Filtrar por nombre ignorando mayúsculas/minúsculas
-      const filtrados = proveedores.filter(proveedor => 
+      const filtrados = proveedores.filter(proveedor =>
         proveedor.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setProveedoresFiltrados(filtrados);
@@ -144,29 +144,29 @@ const Index = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <>
-            <Header 
-              title="Proveedores" 
-              subtitle="¿Qué estás buscando hoy?"
-            >
-              <SearchBar
-                placeholder="Buscar proveedores"
-                value={searchQuery}
-                onChangeText={handleSearchChange}
-              />
-            </Header>
-            
-            <GenericList
-              data={proveedoresFiltrados}
-              renderItem={renderProveedor}
-              keyExtractor={(item) => item.id.toString()}
-              ListEmptyComponent={<NoResultsComponent />}
-              contentContainerStyle={styles.listContent}
-              isLoading={isLoading}
-              onRefresh={handleRefresh}
-              refreshing={isRefreshing}
-              emptyText={`No se encontraron proveedores que coincidan con "${searchQuery}"`}
+          <Header
+            title="Proveedores"
+            subtitle="¿Qué estás buscando hoy?"
+          >
+            <SearchBar
+              placeholder="Buscar proveedores"
+              value={searchQuery}
+              onChangeText={handleSearchChange}
             />
-          </>
+          </Header>
+
+          <GenericList
+            data={proveedoresFiltrados}
+            renderItem={renderProveedor}
+            keyExtractor={(item) => item.id.toString()}
+            ListEmptyComponent={<NoResultsComponent />}
+            contentContainerStyle={styles.listContent}
+            isLoading={isLoading}
+            onRefresh={handleRefresh}
+            refreshing={isRefreshing}
+            emptyText={`No se encontraron proveedores que coincidan con "${searchQuery}"`}
+          />
+        </>
       </View>
     </SafeAreaView>
   );
