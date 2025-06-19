@@ -6,7 +6,6 @@ const AuthStack = () => {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
-      <Stack.Screen name="load" />
       <Stack.Screen name="termsAgree" />
       <Stack.Screen name="privacy" />
       <Stack.Screen name="serviceTerms" />

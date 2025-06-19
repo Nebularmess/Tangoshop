@@ -13,7 +13,7 @@ const RootNavigation = () => {
     async function prepare() {
       try {
         // Aquí puedes cargar datos, fuentes, permisos, etc.
-        await new Promise(resolve => setTimeout(resolve, 100)); // Simula tiempo de carga
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simula tiempo de carga
       } catch (e) {
         console.warn(e);
       } finally {
