@@ -5,6 +5,8 @@ import Header from '../../../components/header';
 import ProviderCard from '../../../components/ProviderCard';
 import SearchBar from '../../../components/searchBar';
 
+import usefetch from "../../../hooks/useFetch";
+
 // Datos de ejemplo para proveedores
 const proveedoresEjemplo = [
   {
@@ -75,13 +77,34 @@ interface Proveedor {
   email: string;
 }
 
+interface resApi {
+  path: string;
+  method: string;
+  error?: any;
+  items: object[];
+}
+
 
 const Index = () => {
+  const { data, execute, error, loading } = usefetch <resApi>();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [proveedores] = useState<Proveedor[]>(proveedoresEjemplo);
   const [proveedoresFiltrados, setProveedoresFiltrados] = useState<Proveedor[]>(proveedores);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  useEffect(() => {
+    execute(
+      {
+        method: 'post',
+        url: 'https://realnodegraphapi-production.up.railway.app/api/findObjects',
+        data: []
+        //la data es el body de la query y va la consulta al back en fomato de query mongo, agregation framework
+      }
+    )
+    
+  }, [])
+  console.log(data?.items)
 
   // Efecto para filtrar proveedores cuando cambia la búsqueda
   useEffect(() => {
@@ -90,7 +113,7 @@ const Index = () => {
       setProveedoresFiltrados(proveedores);
     } else {
       // Filtrar por nombre ignorando mayúsculas/minúsculas
-      const filtrados = proveedores.filter(proveedor => 
+      const filtrados = proveedores.filter(proveedor =>
         proveedor.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setProveedoresFiltrados(filtrados);
@@ -144,29 +167,29 @@ const Index = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <>
-            <Header 
-              title="Proveedores" 
-              subtitle="¿Qué estás buscando hoy?"
-            >
-              <SearchBar
-                placeholder="Buscar proveedores"
-                value={searchQuery}
-                onChangeText={handleSearchChange}
-              />
-            </Header>
-            
-            <GenericList
-              data={proveedoresFiltrados}
-              renderItem={renderProveedor}
-              keyExtractor={(item) => item.id.toString()}
-              ListEmptyComponent={<NoResultsComponent />}
-              contentContainerStyle={styles.listContent}
-              isLoading={isLoading}
-              onRefresh={handleRefresh}
-              refreshing={isRefreshing}
-              emptyText={`No se encontraron proveedores que coincidan con "${searchQuery}"`}
+          <Header
+            title="Proveedores"
+            subtitle="¿Qué estás buscando hoy?"
+          >
+            <SearchBar
+              placeholder="Buscar proveedores"
+              value={searchQuery}
+              onChangeText={handleSearchChange}
             />
-          </>
+          </Header>
+
+          <GenericList
+            data={proveedoresFiltrados}
+            renderItem={renderProveedor}
+            keyExtractor={(item) => item.id.toString()}
+            ListEmptyComponent={<NoResultsComponent />}
+            contentContainerStyle={styles.listContent}
+            isLoading={isLoading}
+            onRefresh={handleRefresh}
+            refreshing={isRefreshing}
+            emptyText={`No se encontraron proveedores que coincidan con "${searchQuery}"`}
+          />
+        </>
       </View>
     </SafeAreaView>
   );
