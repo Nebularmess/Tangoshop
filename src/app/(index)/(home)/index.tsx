@@ -93,7 +93,7 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  useEffect(() => {
+  /* useEffect(() => {
     execute(
       {
         method: 'post',
@@ -104,7 +104,7 @@ const Index = () => {
     )
     
   }, [])
-  console.log(data?.items)
+  console.log(data?.items) */
 
   // Efecto para filtrar proveedores cuando cambia la búsqueda
   useEffect(() => {

@@ -1,50 +1,61 @@
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
+import useAuth from '../../hooks/useAuth';
 
 const TabNavigation = () => {
-    return(
+    console.log("app/(index)/_layout.tsx - Renderizando IndexLayout");
+    const { isAuthenticated } = useAuth();
+
+    if (isAuthenticated === undefined) {
+        //Falta una pantalla de carga como componente
+        return null;
+    }
+
+    if (!isAuthenticated) {
+        return <Redirect href="/(auth)/login" />;
+    }
+
+    return (
         <Tabs>
-            <Tabs.Screen 
-                name="(home)" 
+            <Tabs.Screen
+                name="(home)"
                 options={{
-                    title: "Inicio", 
+                    title: "Inicio",
                     headerShown: false,
                     tabBarIcon: ({ color }) => <Icon size={28} name="home" color={color} />
                 }}
             />
-            <Tabs.Screen 
+            <Tabs.Screen
                 name="(Products)"
                 options={{
                     title: "Productos",
                     headerShown: false,
                     tabBarIcon: ({ color }) => <Icon size={28} name="shopping" color={color} />
                 }}
-                
-
             />
-            <Tabs.Screen 
+            <Tabs.Screen
                 name="(Providers)"
                 options={{
-                    title: "Proveedores", 
+                    title: "Proveedores",
                     headerShown: false,
                     tabBarIcon: ({ color }) => <Icon size={28} name="store" color={color} />
-                }} 
+                }}
             />
-            <Tabs.Screen 
-                name="(MyProducts)" 
+            <Tabs.Screen
+                name="(MyProducts)"
                 options={{
-                    title: "Mis Productos", 
+                    title: "Mis Productos",
                     headerShown: false,
                     tabBarIcon: ({ color }) => <Icon size={28} name="heart" color={color} />
-                }} 
+                }}
             />
-            <Tabs.Screen 
-                name="(Setings)" 
+            <Tabs.Screen
+                name="(Setings)"
                 options={{
-                    title: "Configuración", 
+                    title: "Configuración",
                     headerShown: false,
                     tabBarIcon: ({ color }) => <Icon size={28} name="tools" color={color} />
-                }} 
+                }}
             />
         </Tabs>
     )
