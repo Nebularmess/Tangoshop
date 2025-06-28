@@ -1,20 +1,7 @@
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
-import { Redirect, Tabs } from "expo-router";
-import useAuth from '../../hooks/useAuth';
+import { Tabs } from "expo-router";
 
 const TabNavigation = () => {
-    console.log("app/(index)/_layout.tsx - Renderizando IndexLayout");
-    const { isAuthenticated } = useAuth();
-
-    if (isAuthenticated === undefined) {
-        //Falta una pantalla de carga como componente
-        return null;
-    }
-
-    if (!isAuthenticated) {
-        return <Redirect href="/(auth)/login" />;
-    }
-
     return (
         <Tabs>
             <Tabs.Screen
