@@ -27,60 +27,15 @@ const Asistencia = () => {
   };
 
   const handleNeedHelp = () => {
-    Alert.alert(
-      '¿Necesitas ayuda?',
-      'Describe tu problema o pregunta para que podamos ayudarte de la mejor manera.',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Enviar mensaje',
-          onPress: () => {
-            console.log('Abriendo formulario de ayuda...');
-          },
-        },
-      ]
-    );
+    router.push('/ayuda');
   };
 
   const handleFAQ = () => {
-    Alert.alert(
-      'Preguntas Frecuentes',
-      'Te redirigiremos a nuestra sección de preguntas frecuentes.',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Ver FAQ',
-          onPress: () => {
-            console.log('Navegando a FAQ...');
-          },
-        },
-      ]
-    );
+    router.push('/faq');
   };
 
   const handleFeedback = () => {
-    Alert.alert(
-      'Feedback',
-      'Tu opinión es muy importante para nosotros.',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Dar feedback',
-          onPress: () => {
-            console.log('Abriendo formulario de feedback...');
-          },
-        },
-      ]
-    );
+    router.push('/feedback');
   };
 
   const handleContactUs = () => {

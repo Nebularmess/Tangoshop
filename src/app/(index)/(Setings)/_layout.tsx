@@ -6,6 +6,9 @@ export default function SettingsLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="editarPerfil" />
       <Stack.Screen name="asistencia" />
+      <Stack.Screen name="ayuda" />
+      <Stack.Screen name="feedback" />
+      <Stack.Screen name="faq" />
     </Stack>
   );
 }
