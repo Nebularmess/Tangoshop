@@ -1,11 +1,11 @@
 import { Stack } from "expo-router";
 
-const RootNavigation = () => {
-    return(
-        <Stack>
-            <Stack.Screen name="index" options={{headerShown: false}}/>
-        </Stack>
-    )
+export default function SettingsLayout() {
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="editarPerfil" />
+      <Stack.Screen name="asistencia" />
+    </Stack>
+  );
 }
-
-export default RootNavigation;

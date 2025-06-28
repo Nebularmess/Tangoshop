@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -17,7 +18,7 @@ const Index = () => {
   const [activeScreen, setActiveScreen] = useState<Screen>('Configuracion');
 
   const handleEditarCuenta = () => {
-    Alert.alert('Editar Cuenta', 'Función para editar la cuenta del usuario');
+    router.push('/editarPerfil');
   };
 
   const handleMiCatalogo = () => {
@@ -29,7 +30,7 @@ const Index = () => {
   };
 
   const handleAsistencia = () => {
-    Alert.alert('Asistencia', 'Función para contactar con soporte técnico');
+    router.push('/asistencia');
   };
 
   const handleCerrarSesion = () => {
