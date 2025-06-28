@@ -86,25 +86,36 @@ interface resApi {
 
 
 const Index = () => {
-  const { data, execute, error, loading } = usefetch <resApi>();
+  const { data, execute, error, loading } = usefetch<resApi>();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [proveedores] = useState<Proveedor[]>(proveedoresEjemplo);
   const [proveedoresFiltrados, setProveedoresFiltrados] = useState<Proveedor[]>(proveedores);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  /* useEffect(() => {
+  useEffect(() => {
     execute(
       {
         method: 'post',
-        url: 'https://realnodegraphapi-production.up.railway.app/api/findObjects',
-        data: []
-        //la data es el body de la query y va la consulta al back en fomato de query mongo, agregation framework
+        url: '/api/findObjects',
+        data: [
+          {
+            "$lookup": {
+              "from": "objecttypes",
+              "localField": "type",
+              "foreignField": "_id",
+              "as": "object_type"
+            }
+          },
+          {
+            "$match": { "object_type.parent": "product" }
+          }
+        ]
       }
     )
-    
+
   }, [])
-  console.log(data?.items) */
+  console.log(data?.items)
 
   // Efecto para filtrar proveedores cuando cambia la búsqueda
   useEffect(() => {
