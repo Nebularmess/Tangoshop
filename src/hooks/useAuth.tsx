@@ -8,7 +8,7 @@ export default function useAuth() {
     const checkUser = async () => {
       try {
         const userData = await AsyncStorage.getItem("currentUser");
-        setIsAuthenticated(!!userData); // true si hay usuario, false si no
+        setIsAuthenticated(!userData); // true si hay usuario, false si no
       } catch (error) {
         console.error("Error checking auth", error);
         setIsAuthenticated(false);
