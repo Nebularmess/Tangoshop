@@ -22,11 +22,7 @@ const Index = () => {
   };
 
   const handleMiCatalogo = () => {
-    Alert.alert('Mi Catálogo', 'Función para gestionar el catálogo personal');
-  };
-
-  const handleNotificaciones = () => {
-    Alert.alert('Notificaciones', 'Función para configurar notificaciones');
+    router.push('/miCatalogo');
   };
 
   const handleAsistencia = () => {
@@ -65,12 +61,6 @@ const Index = () => {
       title: 'Mi Catálogo',
       icon: <Icon name="list" size={32} color="#FFFFFF" />,
       onPress: handleMiCatalogo,
-    },
-    {
-      id: 'notificaciones',
-      title: 'Notificaciones',
-      icon: <Icon name="bell" size={32} color="#FFFFFF" />,
-      onPress: handleNotificaciones,
     },
     {
       id: 'asistencia',
@@ -116,7 +106,7 @@ const Index = () => {
             </View>
             <View style={styles.infoSection}>
               <Text style={styles.infoText}>Versión 1.0.0</Text>
-              <Text style={styles.infoSubtext}>© 2024 Tango Shop</Text>
+              <Text style={styles.infoSubtext}>© 2025 Tango Shop</Text>
             </View>
           </View>
         </ScrollView>
