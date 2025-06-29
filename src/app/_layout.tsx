@@ -13,7 +13,7 @@ export default function RootLayout() {
     if (isAuthenticated) {
       router.replace("/(index)/(home)");
     } else {
-      router.replace("/(auth)");
+      router.replace("/(auth)/termsAgree");
     }
   }, [isAuthenticated]);
 

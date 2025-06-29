@@ -1,7 +1,6 @@
 // (auth)/termsAgree.tsx
 import BottomComponent from "@/src/components/BottomComponent";
 import { COLORS } from "@/src/constants/colors";
-import imagePath from "@/src/constants/imagePath";
 import { router } from "expo-router";
 import React from "react";
 import { Image, ImageBackground, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -23,7 +22,7 @@ const TermsAgreeView = () => {
 
     return (
         <ImageBackground 
-            source={imagePath.splash} 
+            source={require("@/src/assets/images/bgHeader.jpeg")} 
             style={styles.backgroundImage}
             resizeMode="cover"
         >
@@ -31,14 +30,15 @@ const TermsAgreeView = () => {
                 <View style={styles.termsBody}>
                     <Text style={styles.termsTitle}>Términos y Condiciones</Text>
                     <View style={styles.termsHeader}>
-                        <Image source={imagePath.imageTermsAgree} style={styles.termsImage} resizeMode="contain" />
+                        <Image source={require("@/src/assets/images/tango_shop_logo.png")} style={styles.termsImage} resizeMode="contain" />
                     </View>
                     <Text style={styles.descriptionText}>
-                        Read our{" "}
+                        Read our
                         <TouchableOpacity onPress={handlePrivacyPolicyPress}>
                             <Text style={styles.linkText}>Privacy Policy.</Text>
                         </TouchableOpacity>
-                        {" "}Tap "Agree and continue" to accept the{" "}
+                        
+                        Tap Agree and continue to accept the
                         <TouchableOpacity onPress={handleTermsOfServicePress}>
                             <Text style={styles.linkText}>Terms of Service.</Text>
                         </TouchableOpacity>
@@ -76,8 +76,8 @@ const styles = StyleSheet.create({
         marginBottom: moderateScale(0.1),
     },
     termsImage: {
-        height: moderateScale(250),
-        width: moderateScale(250),
+        height: moderateScale(200),
+        width: moderateScale(200),
         marginBottom: moderateScale(30),
     },
     termsBody: {
