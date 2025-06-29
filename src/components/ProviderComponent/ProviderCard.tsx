@@ -12,6 +12,8 @@ interface Provider {
     legal_name: string;
     industry: string;
     tax_address: string;
+    phone_number?: string;
+    email?: string;
   };
 }
 
@@ -28,7 +30,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
 }) => {
   const router = useRouter();
 
-const handlePress = () => {
+  const handlePress = () => {
     if (onPress) {
       onPress(provider);
     } else {
@@ -36,6 +38,21 @@ const handlePress = () => {
       router.push(`/(index)/(Providers)/${provider._id}`);
     }
   };
+
+  // Función para extraer ciudad y provincia de la dirección
+  const parseAddress = (address: string) => {
+    // Formato esperado: "Calle 123 - Ciudad - Provincia"
+    const parts = address.split(' - ');
+    if (parts.length >= 3) {
+      const street = parts[0];
+      const city = parts[1];
+      const province = parts[2];
+      return { street, city, province };
+    }
+    return { street: address, city: '', province: '' };
+  };
+
+  const { street, city, province } = parseAddress(provider.props.tax_address);
 
   if (variant === 'vertical') {
     return (
@@ -56,7 +73,7 @@ const handlePress = () => {
       >
         <View className='p-4'>
           <View className='flex-row items-start space-x-3'>
-            {/* Logo del proveedor - más pequeño */}
+            {/* Logo del proveedor */}
             <Image
               source={{ uri: provider.image }}
               className='w-12 h-12 rounded-lg bg-gray-100'
@@ -78,15 +95,62 @@ const handlePress = () => {
                 </Text>
               </View>
               
-              {/* Dirección con ícono */}
-              <View className='flex-row items-start mb-2'>
+              {/* Dirección (solo calle) con ícono - removido porque ahora va abajo */}
+              {/* <View className='flex-row items-start mb-2'>
                 <MaterialCommunityIcons name="map-marker" size={16} color="#6B7280" />
                 <Text className='text-sm text-gray-600 ml-2 flex-1' numberOfLines={1}>
-                  {provider.props.tax_address}
+                  {street}
                 </Text>
-              </View>
+              </View> */}
 
-              {/* Solo dirección - sin información adicional */}
+              {/* Fila de información adicional */}
+              <View className='flex-row justify-between items-start'>
+                {/* Columna izquierda: Teléfono y Email */}
+                <View className='flex-1 mr-2'>
+                  {/* Teléfono */}
+                  {provider.props.phone_number && (
+                    <View className='flex-row items-center mb-1'>
+                      <MaterialCommunityIcons name="phone" size={14} color="#6B7280" />
+                      <Text className='text-xs text-gray-600 ml-1 flex-1' numberOfLines={1}>
+                        {provider.props.phone_number}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  {/* Email - sin numberOfLines para mostrar completo */}
+                  {provider.props.email && (
+                    <View className='flex-row items-start'>
+                      <MaterialCommunityIcons name="email" size={14} color="#6B7280" style={{ marginTop: 1 }} />
+                      <Text className='text-xs text-gray-600 ml-1 flex-1'>
+                        {provider.props.email}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Columna derecha: Ciudad-Provincia y Dirección */}
+                <View className='flex-1 items-end'>
+                  {/* Ciudad y Provincia juntos */}
+                  {(city || province) && (
+                    <View className='flex-row items-center mb-1'>
+                      <MaterialCommunityIcons name="map-marker" size={14} color="#6B7280" />
+                      <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
+                        {city}{city && province ? ', ' : ''}{province}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  {/* Dirección (calle) */}
+                  {street && (
+                    <View className='flex-row items-center'>
+                      <MaterialCommunityIcons name="home" size={14} color="#6B7280" />
+                      <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
+                        {street}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
             </View>
 
             {/* Flecha de navegación */}
@@ -141,12 +205,61 @@ const handlePress = () => {
           </View>
         </View>
         
-        {/* Dirección */}
-        <View className='flex-row items-start mb-3'>
+        {/* Dirección (solo calle) - removido porque ahora va en la columna derecha */}
+        {/* <View className='flex-row items-start mb-3'>
           <MaterialCommunityIcons name="map-marker-outline" size={14} color="#6B7280" />
-          <Text className='text-sm text-gray-600 ml-1 flex-1 leading-5' numberOfLines={2}>
-            {provider.props.tax_address}
+          <Text className='text-sm text-gray-600 ml-1 flex-1 leading-5' numberOfLines={1}>
+            {street}
           </Text>
+        </View> */}
+
+        {/* Información de contacto y ubicación */}
+        <View className='flex-row justify-between items-start mb-3'>
+          {/* Columna izquierda: Contacto */}
+          <View className='flex-1 mr-2'>
+            {/* Teléfono */}
+            {provider.props.phone_number && (
+              <View className='flex-row items-center mb-1'>
+                <MaterialCommunityIcons name="phone" size={12} color="#6B7280" />
+                <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
+                  {provider.props.phone_number}
+                </Text>
+              </View>
+            )}
+            
+            {/* Email - sin numberOfLines */}
+            {provider.props.email && (
+              <View className='flex-row items-start'>
+                <MaterialCommunityIcons name="email" size={12} color="#6B7280" style={{ marginTop: 1 }} />
+                <Text className='text-xs text-gray-600 ml-1'>
+                  {provider.props.email}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Columna derecha: Ubicación */}
+          <View className='flex-1 items-end'>
+            {/* Ciudad y Provincia juntos */}
+            {(city || province) && (
+              <View className='flex-row items-center mb-1'>
+                <MaterialCommunityIcons name="map-marker" size={12} color="#6B7280" />
+                <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
+                  {city}{city && province ? ', ' : ''}{province}
+                </Text>
+              </View>
+            )}
+            
+            {/* Dirección (calle) */}
+            {street && (
+              <View className='flex-row items-center'>
+                <MaterialCommunityIcons name="home" size={12} color="#6B7280" />
+                <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
+                  {street}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Footer simple */}

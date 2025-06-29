@@ -15,12 +15,20 @@ const DescriptionSection: React.FC<DescriptionSectionProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [showReadMore, setShowReadMore] = useState(false);
 
+  // Debug log para verificar qué descripción llega
+  console.log('🔍 DescriptionSection recibió:', { title, description: description?.substring(0, 50) + '...' });
+
   const handleTextLayout = (event: any) => {
     const { lines } = event.nativeEvent;
     if (lines.length > maxLines) {
       setShowReadMore(true);
     }
   };
+
+  // Si no hay descripción, no mostrar el componente
+  if (!description || description.trim().length === 0) {
+    return null;
+  }
 
   return (
     <View className='px-4 py-3'>
