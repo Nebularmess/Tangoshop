@@ -17,9 +17,9 @@ export default function SectionCard({ title, redirect, children }: SectionCardPr
   };
 
   return (
-    <View className='bg-white p-2 rounded-lg'>
+    <View className='bg-white p-2 rounded-lg mt-3'>
       <View className='flex-row justify-between items-center'>
-        <Text className='text-xl font-bold'>{title}</Text>
+        <Text className='text-lg font-bold'>{title}</Text>
         {redirect && (
           <TouchableOpacity onPress={handleRedirect}>
             <Text className='text-blue-500'>Ver más</Text>
