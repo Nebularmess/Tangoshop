@@ -149,7 +149,7 @@ const EditProfile = () => {
 
               <TextInput
                 style={styles.input}
-                placeholder="Nro Teléfono"
+                placeholder="Teléfono"
                 placeholderTextColor="#9CA3AF"
                 value={formData.telefono}
                 onChangeText={(value) => handleInputChange('telefono', value)}

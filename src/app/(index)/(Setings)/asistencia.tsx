@@ -1,14 +1,14 @@
 import { router } from 'expo-router';
 import React from 'react';
 import {
-    Alert,
-    Linking,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Linking,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Header from '../../../components/header';
@@ -63,25 +63,6 @@ const Asistencia = () => {
     );
   };
 
-  const handleOtherOption = () => {
-    Alert.alert(
-      'Otra opción',
-      'Para consultas específicas, nuestro equipo está disponible para ayudarte.',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Contactar',
-          onPress: () => {
-            console.log('Contactando para otra opción...');
-          },
-        },
-      ]
-    );
-  };
-
   const assistanceOptions: AssistanceOption[] = [
     {
       id: 'needHelp',
@@ -110,13 +91,6 @@ const Asistencia = () => {
       description: 'Nro tel: +54-3624-420686\nContacto@contacto.com\nCalle French 400 piso 2\nOficina 5a',
       icon: 'phone',
       onPress: handleContactUs,
-    },
-    {
-      id: 'other',
-      title: 'Otra opción',
-      description: 'Brindanos tu opinión sobre el servicio que provemos para mejorar aún más',
-      icon: 'more-horizontal',
-      onPress: handleOtherOption,
     },
   ];
 

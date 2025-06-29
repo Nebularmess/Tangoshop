@@ -4,6 +4,7 @@ import {
     Alert,
     Clipboard,
     Image,
+    Modal,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -54,13 +55,12 @@ const MiCatalogo = () => {
 
   ]);
 
-  const [categorias, setCategorias] = useState<Categoria[]>([
-
-  ]);
-
   const [productosSeleccionados, setProductosSeleccionados] = useState<Producto[]>(
     productos.filter(p => p.seleccionado)
   );
+
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [tempImageUrl, setTempImageUrl] = useState('');
 
   const catalogoUrl = `https://plataforma.com/catalogo/${catalogoData.nombreTienda.toLowerCase().replace(/\s+/g, '-') || 'usuario'}`;
 
@@ -81,36 +81,23 @@ const MiCatalogo = () => {
   };
 
   const handleSeleccionarImagen = () => {
-    Alert.prompt(
-      'Imagen de Portada',
-      'Ingresa la URL de la imagen que quieres usar como portada:',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Agregar',
-          onPress: (url) => {
-            if (url && url.trim()) {
-              handleInputChange('imagenPortada', url.trim());
-            }
-          },
-        },
-      ],
-      'plain-text',
-      catalogoData.imagenPortada
-    );
+    setTempImageUrl(catalogoData.imagenPortada);
+    setShowImageModal(true);
   };
 
-  const toggleCategoria = (categoriaId: string) => {
-    setCategorias(prev =>
-      prev.map(cat =>
-        cat.id === categoriaId
-          ? { ...cat, seleccionada: !cat.seleccionada }
-          : cat
-      )
-    );
+  const handleConfirmarImagen = () => {
+    if (tempImageUrl && tempImageUrl.trim()) {
+      handleInputChange('imagenPortada', tempImageUrl.trim());
+    } else {
+      handleInputChange('imagenPortada', '');
+    }
+    setShowImageModal(false);
+    setTempImageUrl('');
+  };
+
+  const handleCancelarImagen = () => {
+    setShowImageModal(false);
+    setTempImageUrl('');
   };
 
   const toggleProducto = (productoId: string) => {
@@ -166,8 +153,6 @@ const MiCatalogo = () => {
         >
           {/* Sección 1: Formulario de Configuración */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Configuración del Catálogo</Text>
-            
             {/* Imagen de Portada */}
             <View style={styles.imageSection}>
               <View style={styles.fieldContainer}>
@@ -217,7 +202,7 @@ const MiCatalogo = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Descripción Breve (Opcional)</Text>
+                <Text style={styles.fieldLabel}>Descripción (Opcional)</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   placeholder="Describe tu negocio en pocas palabras..."
@@ -284,32 +269,34 @@ const MiCatalogo = () => {
             </View>
 
             {/* Selección de Productos */}
-            <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Mis Productos</Text>
-              <Text style={styles.fieldSubtitle}>Selecciona los productos que quieres mostrar</Text>
-              <View style={styles.productsList}>
-                {productos.map((producto) => (
-                  <TouchableOpacity
-                    key={producto.id}
-                    style={[
-                      styles.productItem,
-                      productosSeleccionados.find(p => p.id === producto.id) && styles.productItemSelected
-                    ]}
-                    onPress={() => toggleProducto(producto.id)}
-                  >
-                    <View style={styles.productInfo}>
-                      <Text style={styles.productName}>{producto.nombre}</Text>
-                      <Text style={styles.productPrice}>{producto.precio}</Text>
-                    </View>
-                    <Icon 
-                      name={productosSeleccionados.find(p => p.id === producto.id) ? "check-circle" : "circle"} 
-                      size={20} 
-                      color={productosSeleccionados.find(p => p.id === producto.id) ? "#133A7D" : "#9CA3AF"} 
-                    />
-                  </TouchableOpacity>
-                ))}
+            {productos.length >= 0 && (
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Mis Productos</Text>
+                <Text style={styles.fieldSubtitle}>Selecciona los productos que quieres mostrar</Text>
+                <View style={styles.productsList}>
+                  {productos.map((producto) => (
+                    <TouchableOpacity
+                      key={producto.id}
+                      style={[
+                        styles.productItem,
+                        productosSeleccionados.find(p => p.id === producto.id) && styles.productItemSelected
+                      ]}
+                      onPress={() => toggleProducto(producto.id)}
+                    >
+                      <View style={styles.productInfo}>
+                        <Text style={styles.productName}>{producto.nombre}</Text>
+                        <Text style={styles.productPrice}>{producto.precio}</Text>
+                      </View>
+                      <Icon 
+                        name={productosSeleccionados.find(p => p.id === producto.id) ? "check-circle" : "circle"} 
+                        size={20} 
+                        color={productosSeleccionados.find(p => p.id === producto.id) ? "#133A7D" : "#9CA3AF"} 
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
-            </View>
+            )}
           </View>
 
           {/* Sección 2: URL del Catálogo */}
@@ -335,6 +322,45 @@ const MiCatalogo = () => {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      {/* Modal para URL de imagen */}
+      <Modal
+        visible={showImageModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleCancelarImagen}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Imagen de Portada</Text>
+            <Text style={styles.modalSubtitle}>
+              Ingresa la URL de la imagen que quieres usar como portada:
+            </Text>
+            
+            <TextInput
+              style={styles.modalInput}
+              placeholder="https://ejemplo.com/imagen.jpg"
+              placeholderTextColor="#9CA3AF"
+              value={tempImageUrl}
+              onChangeText={setTempImageUrl}
+              autoCapitalize="none"
+              keyboardType="url"
+              multiline={true}
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalButtonCancel} onPress={handleCancelarImagen}>
+                <Text style={styles.modalButtonCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleConfirmarImagen}>
+                <Text style={styles.modalButtonConfirmText}>Agregar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -393,13 +419,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   imageSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     marginBottom: 20,
-  },
-  imageContainer: {
-    flex: 1,
-    marginRight: 10,
   },
   fieldLabel: {
     fontSize: 14,
@@ -415,45 +435,30 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   imageUpload: {
-    height: 100,
+    height: 120,
     borderWidth: 2,
     borderColor: '#E5E7EB',
     borderStyle: 'dashed',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  imageUploadSmall: {
-    width: 80,
-    height: 80,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderStyle: 'dashed',
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
   },
   placeholderImage: {
     alignItems: 'center',
-  },
-  placeholderImageSmall: {
-    alignItems: 'center',
+    padding: 20,
   },
   placeholderText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#9CA3AF',
-    marginTop: 4,
+    marginTop: 8,
     fontFamily: 'Inter',
+    textAlign: 'center',
   },
   uploadedImage: {
     width: '100%',
     height: '100%',
     borderRadius: 10,
-  },
-  uploadedImageSmall: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 38,
   },
   removeImageButton: {
     marginTop: 8,
@@ -518,41 +523,8 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontFamily: 'Inter',
   },
-  categoriesList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
-  },
-  categoryChipSelected: {
-    borderColor: '#133A7D',
-    backgroundColor: '#133A7D',
-  },
-  categoryChipText: {
-    fontSize: 14,
-    color: '#374151',
-    fontFamily: 'Inter',
-  },
-  categoryChipTextSelected: {
-    color: '#FFFFFF',
-  },
   urlContainer: {
     alignItems: 'center',
-  },
-  urlLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#059669',
-    marginBottom: 12,
-    textAlign: 'center',
-    fontFamily: 'Inter',
   },
   urlBox: {
     flexDirection: 'row',
@@ -599,6 +571,94 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
+  // Estilos del Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+    textAlign: 'center',
+    fontFamily: 'Inter',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 20,
+    fontFamily: 'Inter',
+  },
+  modalInput: {
+    height: 80,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    fontSize: 16,
+    fontWeight: '400',
+    color: '#374151',
+    fontFamily: 'Inter',
+    marginBottom: 24,
+    textAlignVertical: 'top',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButtonCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  modalButtonCancelText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6B7280',
+    textAlign: 'center',
+    fontFamily: 'Inter',
+  },
+  modalButtonConfirm: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#133A7D',
+  },
+  modalButtonConfirmText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    textAlign: 'center',
     fontFamily: 'Inter',
   },
 });
