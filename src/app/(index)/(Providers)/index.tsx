@@ -1,149 +1,110 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import ProviderCard from '../../../components/ProviderCard';
+import ProviderCard from './ProviderCard';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
 import NavBar from '../../../components/navBar';
 import SearchBar from '../../../components/searchBar';
+import usefetch from "../../../hooks/useFetch";
+import { getProviders } from '../../../utils/queryProv';
 
-// Datos de ejemplo para proveedores
-const proveedoresEjemplo = [
-  {
-    id: 48,
-    imageUri: 'https://picsum.photos/100',
-    name: 'Carlos Bisordi',
-    rating: 5,
-    category: 'Mayorista',
-    subcategory: 'Deportes',
-    description: 'Equipamiento Deportivo',
-    city: 'Resistencia',
-    address: 'Calle texto, 1234',
-    phone: '+54 362 412 345',
-    email: 'contacto@gmail.com'
-  },
-  {
-    id: 49,
-    imageUri: 'https://picsum.photos/60',
-    name: 'Luis A. Cuadrado',
-    rating: 4,
-    category: 'Minorista',
-    subcategory: 'Oficina',
-    description: 'Artículos para la Oficina',
-    city: 'Resistencia',
-    address: 'Av. Principal, 567',
-    phone: '+54 362 420 789',
-    email: 'luis@comercial.com'
-  },
-  {
-    id: 50,
-    imageUri: 'https://picsum.photos/60',
-    name: 'María Gómez',
-    rating: 5,
-    category: 'Mayorista',
-    subcategory: 'Tecnología',
-    description: 'Equipos Electrónicos',
-    city: 'Corrientes',
-    address: 'Av. Libertad, 789',
-    phone: '+54 379 445 678',
-    email: 'maria@tech.com'
-  },
-  {
-    id: 51,
-    imageUri: 'https://picsum.photos/60',
-    name: 'Juan Rodríguez',
-    rating: 3,
-    category: 'Distribuidor',
-    subcategory: 'Alimentos',
-    description: 'Productos Alimenticios',
-    city: 'Formosa',
-    address: 'Calle Central, 432',
-    phone: '+54 370 432 123',
-    email: 'juan@alimentos.com'
-  }
-];
-
-interface Proveedor {
-  id: number;
-  imageUri: string;
+// Interface para el proveedor del backend
+interface Provider {
+  _id: string;
   name: string;
-  rating: number;
-  category: string;
-  subcategory: string;
-  description: string;
-  city: string;
-  address: string;
-  phone: string;
-  email: string;
+  image: string;
+  tags: string[];
+  props: {
+    legal_name: string;
+    industry: string;
+    tax_address: string;
+  };
 }
 
-// Modificar para usar los mismos nombres de pantalla que en NavBar
+// Interface para la respuesta de la API
+interface ProvidersApiResponse {
+  path: string;
+  method: string;
+  error?: any;
+  items: Provider[];
+}
+
 type Screen = 'index' | 'Proveedores' | 'Buscador' | 'Favoritos' | 'Configuracion';
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [proveedores] = useState<Proveedor[]>(proveedoresEjemplo);
-  const [proveedoresFiltrados, setProveedoresFiltrados] = useState<Proveedor[]>(proveedores);
-  // Cambiado el estado inicial para coincidir con el NavBar
+  const [proveedoresFiltrados, setProveedoresFiltrados] = useState<Provider[]>([]);
   const [activeScreen, setActiveScreen] = useState<Screen>('index');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  // Efecto para filtrar proveedores cuando cambia la búsqueda
+  // Hook para obtener datos del backend
+  const { data: providers, execute: fetchProviders, loading: loadingProviders } = usefetch<ProvidersApiResponse>();
+
+  // Obtener proveedores al cargar el componente
   useEffect(() => {
+    fetchProviders({ method: 'post', url: '/api/findObjects', data: getProviders });
+  }, []);
+
+  // Efecto para filtrar proveedores cuando cambia la búsqueda o llegan nuevos datos
+  useEffect(() => {
+    if (!providers?.items) {
+      setProveedoresFiltrados([]);
+      return;
+    }
+
     if (searchQuery.trim() === '') {
       // Si la búsqueda está vacía, mostrar todos los proveedores
-      setProveedoresFiltrados(proveedores);
+      setProveedoresFiltrados(providers.items);
     } else {
-      // Filtrar por nombre ignorando mayúsculas/minúsculas
-      const filtrados = proveedores.filter(proveedor => 
-        proveedor.name.toLowerCase().includes(searchQuery.toLowerCase())
+      // Filtrar por nombre, industria o dirección
+      const filtrados = providers.items.filter(proveedor => 
+        proveedor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        proveedor.props.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        proveedor.props.tax_address.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setProveedoresFiltrados(filtrados);
     }
-  }, [searchQuery, proveedores]);
+  }, [searchQuery, providers]);
 
   // Función para manejar el cambio en el texto de búsqueda
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
   };
 
+  // Función para manejar selección de proveedor
+  const handleProviderPress = (provider: Provider) => {
+    console.log(`Proveedor seleccionado: ${provider.name}`);
+  };
+
   // Función para renderizar un proveedor
-  const renderProveedor = (proveedor: Proveedor) => (
+  const renderProveedor = (proveedor: Provider) => (
     <ProviderCard
-      id={proveedor.id}
-      imageUri={proveedor.imageUri}
-      name={proveedor.name}
-      rating={proveedor.rating}
-      category={proveedor.category}
-      subcategory={proveedor.subcategory}
-      description={proveedor.description}
-      city={proveedor.city}
-      address={proveedor.address}
-      phone={proveedor.phone}
-      email={proveedor.email}
-      onPress={() => console.log(`Proveedor seleccionado: ${proveedor.name}`)}
+      provider={proveedor}
+      variant="vertical"
+      onPress={handleProviderPress}
     />
   );
 
   // Función para refrescar los datos
   const handleRefresh = () => {
     setIsRefreshing(true);
-    // Aquí normalmente harías una llamada a API para obtener datos frescos
-    // Simulamos un delay para mostrar el refreshing
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 1500);
+    fetchProviders({ method: 'post', url: '/api/findObjects', data: getProviders })
+      .finally(() => {
+        setIsRefreshing(false);
+      });
   };
 
   // Componente para mostrar cuando no hay resultados
   const NoResultsComponent = () => (
     <View style={styles.noResultsContainer}>
       <Text style={styles.noResultsText}>
-        `No se encontraron proveedores que coincidan con ${searchQuery}`
+        {searchQuery.trim() 
+          ? `No se encontraron proveedores que coincidan con "${searchQuery}"`
+          : "No hay proveedores disponibles"
+        }
       </Text>
     </View>
   );
-
 
   const renderScreen = () => {
     switch (activeScreen) {
@@ -164,13 +125,16 @@ const Index = () => {
             <GenericList
               data={proveedoresFiltrados}
               renderItem={renderProveedor}
-              keyExtractor={(item) => item.id.toString()}
+              keyExtractor={(item) => item._id}
               ListEmptyComponent={<NoResultsComponent />}
               contentContainerStyle={styles.listContent}
-              isLoading={isLoading}
+              isLoading={loadingProviders}
               onRefresh={handleRefresh}
               refreshing={isRefreshing}
-              emptyText={`No se encontraron proveedores que coincidan con "${searchQuery}"`}
+              emptyText={searchQuery.trim() 
+                ? `No se encontraron proveedores que coincidan con "${searchQuery}"`
+                : "No hay proveedores disponibles"
+              }
             />
           </>
         );
@@ -179,13 +143,25 @@ const Index = () => {
           <View style={styles.screenContainer}>
             <Text style={styles.screenTitle}>Búsqueda Avanzada</Text>
             <SearchBar
-              placeholder="Buscar por nombre, categoría o ciudad"
+              placeholder="Buscar por nombre, industria o ciudad"
               value={searchQuery}
               onChangeText={handleSearchChange}
             />
+            {/* Mostrar resultados de búsqueda aquí si hay query */}
+            {searchQuery.trim() !== '' && (
+              <View style={{ marginTop: 20, flex: 1 }}>
+                <GenericList
+                  data={proveedoresFiltrados}
+                  renderItem={renderProveedor}
+                  keyExtractor={(item) => item._id}
+                  contentContainerStyle={styles.listContent}
+                  ListEmptyComponent={<NoResultsComponent />}
+                />
+              </View>
+            )}
           </View>
         );
-      case 'Proveedores': // Cambiado de 'list' a 'provider'
+      case 'Proveedores':
         return (
           <>
             <Header 
@@ -193,12 +169,14 @@ const Index = () => {
               subtitle="Todos los proveedores disponibles"
             />
             <GenericList
-              data={proveedores}
+              data={providers?.items || []}
               renderItem={renderProveedor}
-              keyExtractor={(item) => item.id.toString()}
+              keyExtractor={(item) => item._id}
               contentContainerStyle={styles.listContent}
               onRefresh={handleRefresh}
               refreshing={isRefreshing}
+              isLoading={loadingProviders}
+              emptyText="No hay proveedores disponibles"
             />
           </>
         );
@@ -212,7 +190,7 @@ const Index = () => {
             <GenericList
               data={[]} // Lista vacía para demostrar el emptyComponent
               renderItem={renderProveedor}
-              keyExtractor={(item) => item.id.toString()}
+              keyExtractor={(item) => item._id}
               contentContainerStyle={styles.listContent}
               emptyText="No tienes proveedores favoritos"
             />
@@ -235,7 +213,9 @@ const Index = () => {
       <View style={styles.container}>
         {renderScreen()}
       </View>
-      <NavBar activeScreen={activeScreen} />
+      <NavBar 
+        activeScreen={activeScreen}
+      />
     </SafeAreaView>
   );
 };
