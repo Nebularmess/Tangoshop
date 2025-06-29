@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import ProviderCard from './ProviderCard';
+import ProviderCard from '../../../components/ProviderComponent/ProviderCard';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
 import NavBar from '../../../components/navBar';
@@ -77,13 +77,13 @@ const Index = () => {
   };
 
   // Función para renderizar un proveedor
-  const renderProveedor = (proveedor: Provider) => (
-    <ProviderCard
-      provider={proveedor}
-      variant="vertical"
-      onPress={handleProviderPress}
-    />
-  );
+const renderProveedor = (proveedor: Provider) => (
+  <ProviderCard
+    provider={proveedor}
+    variant="vertical"
+    // Sin onPress - usará la navegación por defecto
+  />
+);
 
   // Función para refrescar los datos
   const handleRefresh = () => {

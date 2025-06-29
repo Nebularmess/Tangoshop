@@ -28,13 +28,12 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
 }) => {
   const router = useRouter();
 
-  const handlePress = () => {
+const handlePress = () => {
     if (onPress) {
       onPress(provider);
     } else {
-      // TODO: Crear ruta de detalle del proveedor
-      console.log('Proveedor seleccionado:', provider.name);
-      // router.push(`/provider/${provider._id}`);
+      // Navegar a la pantalla de detalle
+      router.push(`/(index)/(Providers)/${provider._id}`);
     }
   };
 
