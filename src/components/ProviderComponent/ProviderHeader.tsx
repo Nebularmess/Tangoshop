@@ -21,8 +21,8 @@ const ProviderHeader: React.FC<ProviderHeaderProps> = ({
   const router = useRouter();
 
   return (
-    <View className='relative overflow-hidden rounded-t-2xl' style={{ height }}>
-      {/* Imagen de fondo */}
+    <View className='relative' style={{ height }}>
+      {/* Imagen de fondo - cubre totalmente, sin contenedor */}
       <Image
         source={{ uri: backgroundImage }}
         className='absolute inset-0 w-full h-full'
@@ -49,15 +49,27 @@ const ProviderHeader: React.FC<ProviderHeaderProps> = ({
         <MaterialCommunityIcons name="share-variant" size={24} color="#374151" />
       </TouchableOpacity>
       
-      {/* Logo del proveedor centrado */}
-      <View className='absolute bottom-6 left-1/2 transform -translate-x-1/2' style={{ marginLeft: -40 }}>
-        <View className='bg-white p-2 rounded-2xl border-4 border-white'>
-          <Image
-            source={{ uri: logoImage }}
-            className='w-20 h-20 rounded-xl'
-            resizeMode='cover'
-          />
-        </View>
+      {/* Logo del proveedor - hacia la IZQUIERDA, con z-index alto */}
+      <View 
+        className='absolute left-6 bg-white p-2 rounded-2xl border-4 border-white'
+        style={{ 
+          bottom: -40, // Se extiende hacia el cuerpo
+          zIndex: 1000, // Z-index alto para que esté encima
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: 2,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 3.84,
+          elevation: 10, // Elevación alta para Android
+        }}
+      >
+        <Image
+          source={{ uri: logoImage }}
+          className='w-20 h-20 rounded-xl'
+          resizeMode='cover'
+        />
       </View>
     </View>
   );
