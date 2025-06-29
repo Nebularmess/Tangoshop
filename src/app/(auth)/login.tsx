@@ -1,102 +1,149 @@
+// (auth)/login.tsx
+import FormComponent from '@/src/components/Form';
+import imagePath from '@/src/constants/imagePath';
+import useAxios from '@/src/hooks/useFetch';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  ImageBackground,
+  SafeAreaView,
+  StyleSheet,
+  View,
+} from 'react-native';
 
-export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const LoginScreen = () => {
+  const { execute, loading } = useAxios();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = () => {
-    console.log('Login pressed', { email, password });
-    // Aquí manejarías la lógica de login
+  const handleLogin = async (formData: Record<string, string>) => {
+    const { email, password } = formData;
+    
+    if (!email || !password) {
+      Alert.alert('Error', 'Todos los campos son obligatorios');
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Error', 'Por favor ingresa un email válido');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const response = await execute({
+        method: 'post',
+        url: '/loginUser',
+        data: {
+          email: email,
+          password: password
+        }
+      });
+
+      if (response && response.ok) {
+        // Guardar datos del usuario en AsyncStorage
+        await AsyncStorage.setItem('currentUser', JSON.stringify(response.ok.data));
+        
+        Alert.alert(
+          'Login Exitoso',
+          `¡Bienvenido de vuelta, ${response.ok.data.name}!`,
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/(auth)/(login)'),
+            },
+          ]
+        );
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      // Manejar diferentes tipos de errores
+      let errorMessage = 'Error al iniciar sesión. Verifica tu email y contraseña.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Email o contraseña incorrectos';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  const handleGoToRegister = () => {
+    router.push('/(auth)/register');
+  };
+
+  const handleForgotPassword = () => {
+    Alert.alert(
+      'Recuperar Contraseña',
+      'Se enviará un enlace de recuperación a tu email',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const loginFields = [
+    {
+      key: 'email',
+      placeholder: 'Email',
+      keyboardType: 'email-address' as const,
+    },
+    {
+      key: 'password',
+      placeholder: 'Password',
+      secureTextEntry: true,
+    },
+  ];
+
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
-    >
-      <StatusBar barStyle="light-content" />
-      
-      {/* Fondo azul con gradiente simulado */}
-      <View className="flex-1 bg-blue-600 relative">
-        {/* Elementos decorativos para simular profundidad */}
-        <View className="absolute top-20 right-10 w-32 h-32 bg-blue-400 rounded-full opacity-30" />
-        <View className="absolute top-40 left-8 w-24 h-24 bg-blue-300 rounded-full opacity-20" />
-        <View className="absolute bottom-32 right-16 w-28 h-28 bg-blue-500 rounded-full opacity-25" />
-        <View className="absolute bottom-64 left-12 w-20 h-20 bg-blue-400 rounded-full opacity-15" />
-        
-        <View className="flex-1 justify-center px-8">
-          {/* Título */}
-          <View className="mb-12 items-center">
-            <Text className="text-white text-4xl font-bold mb-2">Bienvenido</Text>
-            <Text className="text-blue-100 text-lg">Inicia sesión en tu cuenta</Text>
-          </View>
-
-          {/* Formulario con efecto glassmorphism */}
-          <View className="rounded-3xl p-8 border border-white border-opacity-30">
-            {/* Campo Email */}
-            <View className="mb-6">
-              <Text className="text-white text-sm font-medium mb-2 ml-1">Email</Text>
-              <View className="bg-white bg-opacity-80 rounded-2xl border border-white border-opacity-30">
-                <TextInput
-                  className="px-4 py-4 text-base"
-                  placeholder="Ingresa tu email"
-                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
-
-            {/* Campo Password */}
-            <View className="mb-8">
-              <Text className="text-white text-sm font-medium mb-2 ml-1">Contraseña</Text>
-              <View className="bg-white bg-opacity-20 rounded-2xl border border-white border-opacity-30">
-                <TextInput
-                  className="px-4 py-4 text-base"
-                  placeholder="Ingresa tu contraseña"
-                  placeholderTextColor="rgb(199, 199, 199)"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
-              </View>
-            </View>
-
-            {/* Botón de Login */}
-            <TouchableOpacity
-              onPress={handleLogin}
-              className="rounded-2xl py-4 mb-4 border border-white border-opacity-40"
-              activeOpacity={0.8}
-            >
-              <Text className="text-white text-center text-lg font-semibold">
-                Iniciar Sesión
-              </Text>
-            </TouchableOpacity>
-
-            {/* Link olvidé contraseña */}
-            <TouchableOpacity className="items-center">
-              <Text className="text-blue-100 text-sm">
-                ¿Olvidaste tu contraseña?
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Footer */}
-          <View className="mt-8 items-center">
-            <View className="flex-row">
-              <Text className="text-blue-100 text-sm">¿No tienes cuenta? </Text>
-              <TouchableOpacity>
-                <Text className="text-white text-sm font-semibold underline">
-                  Regístrate
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+    <View style={styles.container}>
+      <ImageBackground
+        source={imagePath.splash}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <FormComponent
+            title="Welcome"
+            subtitle="Sign in to access your account"
+            fields={loginFields}
+            primaryButtonText={isSubmitting || loading ? "Iniciando sesión..." : "Sign in"}
+            secondaryButtonText="Register"
+            onPrimaryButtonPress={handleLogin}
+            onSecondaryButtonPress={handleGoToRegister}
+            onForgotPassword={handleForgotPassword}
+            showForgotPassword={true}
+            isLoginScreen={true}
+          />
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  safeArea: {
+    flex: 1,
+  },
+});
+
+export default LoginScreen;
