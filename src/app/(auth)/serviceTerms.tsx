@@ -90,10 +90,7 @@ const TermsOfServiceView = () => {
                     />
                 </View>
 
-                <View style={styles.footer}>
-                    <Text style={styles.fromText}>From</Text>
-                    <Text style={styles.facebookText}>PROGRAMACION3</Text>
-                </View>
+                <View style={styles.footer} />
             </SafeAreaView>
         </ImageBackground>
     );
@@ -131,7 +128,7 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
     },
     termsTitle: {
-        fontSize: moderateScale(24),
+        fontSize: moderateScale(30),
         fontWeight: "bold",
         color: COLORS.text,
         marginTop: moderateScale(75),
@@ -168,14 +165,6 @@ const styles = StyleSheet.create({
     footer: {
         alignItems: "center",
         justifyContent: "flex-end",
-    },
-    fromText: {
-        fontSize: moderateScale(12),
-        color: COLORS.text,
-    },
-    facebookText: {
-        fontSize: moderateScale(15),
-        color: COLORS.text,
     },
 });
 

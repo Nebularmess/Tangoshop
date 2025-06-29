@@ -49,10 +49,7 @@ const TermsAgreeView = () => {
                         onPress={handleAgreeTerms}
                     />
                 </View>
-                <View style={styles.footer}>
-                    <Text style={styles.fromText}>From</Text>
-                    <Text style={styles.facebookText}>PROGRAMACION3</Text>
-                </View>
+                <View style={styles.footer} />
             </SafeAreaView>
         </ImageBackground>
     );
@@ -79,18 +76,18 @@ const styles = StyleSheet.create({
         marginBottom: moderateScale(0.1),
     },
     termsImage: {
-        height: moderateScale(300),
-        width: moderateScale(300),
+        height: moderateScale(250),
+        width: moderateScale(250),
         marginBottom: moderateScale(30),
     },
     termsBody: {
         flex: 2,
-        paddingHorizontal: moderateScale(30),
+        paddingHorizontal: moderateScale(50),
         alignItems: "center",
-        gap: moderateScale(20),
+        gap: moderateScale(30),
     },
     termsTitle: {
-        fontSize: moderateScale(24),
+        fontSize: moderateScale(30),
         fontWeight: "bold",
         color: COLORS.text,
         marginTop: moderateScale(75),
@@ -111,14 +108,6 @@ const styles = StyleSheet.create({
     footer: {
         alignItems: "center",
         justifyContent: "flex-end",
-    },
-    fromText: {
-        fontSize: moderateScale(12),
-        color: COLORS.text,
-    },
-    facebookText: {
-        fontSize: moderateScale(15),
-        color: COLORS.text,
     },
 });
 

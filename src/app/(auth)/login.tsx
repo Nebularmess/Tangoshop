@@ -54,7 +54,7 @@ const LoginScreen = () => {
           [
             {
               text: 'OK',
-              onPress: () => router.replace('/(auth)/(login)'),
+              onPress: () => router.replace('/(index)/(home)'),
             },
           ]
         );

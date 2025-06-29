@@ -35,17 +35,8 @@ const SplashLoadingViews = () => {
                     <Text style={styles.whatsAppText}>TangoShop</Text>
                 </View>
                 <View style={styles.footer}>
-                    {!showLoader && (
-                        <>
-                            <Text style={styles.fromText}>From</Text>
-                            <Text style={styles.facebookText}>PROGRAMACION3</Text>
-                        </>
-                    )}
                     {showLoader && isLoading && (
-                        <>
-                            <ActivityIndicator size={moderateScale(48)} color={COLORS.loadingIndicator} />
-                            <Text style={styles.facebookText}>Loading...</Text>
-                        </>
+                        <ActivityIndicator size={moderateScale(48)} color={COLORS.loadingIndicator} />
                     )}
                 </View>
             </SafeAreaView>
@@ -82,19 +73,11 @@ const styles = StyleSheet.create({
     },
     logoStyle: {
         height: moderateScale(100),
-        width: moderateScale(100),
+        width: moderateScale(200),
     },
     whatsAppText: {
         fontSize: moderateScale(30),
         fontWeight: "bold",
-        color: COLORS.text,
-    },
-    fromText: {
-        fontSize: moderateScale(12),
-        color: COLORS.text,
-    },
-    facebookText: {
-        fontSize: moderateScale(15),
         color: COLORS.text,
     },
 });
