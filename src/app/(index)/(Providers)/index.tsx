@@ -8,16 +8,20 @@ import SearchBar from '../../../components/searchBar';
 import usefetch from "../../../hooks/useFetch";
 import { getProviders } from '../../../utils/queryProv';
 
-// Interface para el proveedor del backend
+// Interface para el proveedor del backend - EXACTAMENTE igual a la del ProviderCard
 interface Provider {
   _id: string;
   name: string;
+  description?: string; // Opcional para coincidir con ProviderCard
   image: string;
   tags: string[];
   props: {
-    legal_name: string;
-    industry: string;
-    tax_address: string;
+    legal_name?: string; // Opcional
+    cuit?: string;
+    industry?: string; // Opcional
+    tax_address?: string; // Opcional
+    phone_number?: string;
+    email?: string;
   };
 }
 
@@ -56,11 +60,11 @@ const Index = () => {
       // Si la búsqueda está vacía, mostrar todos los proveedores
       setProveedoresFiltrados(providers.items);
     } else {
-      // Filtrar por nombre, industria o dirección
+      // Filtrar por nombre, industria o dirección con manejo de valores opcionales
       const filtrados = providers.items.filter(proveedor => 
         proveedor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        proveedor.props.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        proveedor.props.tax_address.toLowerCase().includes(searchQuery.toLowerCase())
+        (proveedor.props.industry && proveedor.props.industry.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (proveedor.props.tax_address && proveedor.props.tax_address.toLowerCase().includes(searchQuery.toLowerCase()))
       );
       setProveedoresFiltrados(filtrados);
     }
@@ -76,14 +80,31 @@ const Index = () => {
     console.log(`Proveedor seleccionado: ${provider.name}`);
   };
 
-  // Función para renderizar un proveedor
-const renderProveedor = (proveedor: Provider) => (
-  <ProviderCard
-    provider={proveedor}
-    variant="vertical"
-    // Sin onPress - usará la navegación por defecto
-  />
-);
+  // Función para renderizar un proveedor - ACTUALIZADA con sistema de loading
+  const renderProveedor = (proveedor: Provider) => (
+    <ProviderCard
+      provider={proveedor}
+      variant="vertical"
+      isLoading={false} // Los datos reales no están cargando
+      // Sin onPress - usará la navegación por defecto
+    />
+  );
+
+  // Función para renderizar proveedores en estado de loading
+  const renderLoadingProveedor = (index: number) => (
+    <ProviderCard
+      key={`loading-${index}`}
+      provider={{
+        _id: `loading-${index}`,
+        name: "Cargando nombre...",
+        image: "",
+        tags: [],
+        props: {}
+      }}
+      variant="vertical"
+      isLoading={true} // Activamos el estado de loading
+    />
+  );
 
   // Función para refrescar los datos
   const handleRefresh = () => {
@@ -106,6 +127,13 @@ const renderProveedor = (proveedor: Provider) => (
     </View>
   );
 
+  // Componente de loading personalizado para la lista
+  const LoadingComponent = () => (
+    <View style={styles.listContent}>
+      {Array.from({ length: 6 }).map((_, index) => renderLoadingProveedor(index))}
+    </View>
+  );
+
   const renderScreen = () => {
     switch (activeScreen) {
       case 'index':
@@ -122,20 +150,24 @@ const renderProveedor = (proveedor: Provider) => (
               />
             </Header>
             
-            <GenericList
-              data={proveedoresFiltrados}
-              renderItem={renderProveedor}
-              keyExtractor={(item) => item._id}
-              ListEmptyComponent={<NoResultsComponent />}
-              contentContainerStyle={styles.listContent}
-              isLoading={loadingProviders}
-              onRefresh={handleRefresh}
-              refreshing={isRefreshing}
-              emptyText={searchQuery.trim() 
-                ? `No se encontraron proveedores que coincidan con "${searchQuery}"`
-                : "No hay proveedores disponibles"
-              }
-            />
+            {loadingProviders ? (
+              <LoadingComponent />
+            ) : (
+              <GenericList
+                data={proveedoresFiltrados}
+                renderItem={renderProveedor}
+                keyExtractor={(item) => item._id}
+                ListEmptyComponent={<NoResultsComponent />}
+                contentContainerStyle={styles.listContent}
+                isLoading={false} // Ya manejamos el loading arriba
+                onRefresh={handleRefresh}
+                refreshing={isRefreshing}
+                emptyText={searchQuery.trim() 
+                  ? `No se encontraron proveedores que coincidan con "${searchQuery}"`
+                  : "No hay proveedores disponibles"
+                }
+              />
+            )}
           </>
         );
       case 'Buscador':
@@ -150,13 +182,18 @@ const renderProveedor = (proveedor: Provider) => (
             {/* Mostrar resultados de búsqueda aquí si hay query */}
             {searchQuery.trim() !== '' && (
               <View style={{ marginTop: 20, flex: 1 }}>
-                <GenericList
-                  data={proveedoresFiltrados}
-                  renderItem={renderProveedor}
-                  keyExtractor={(item) => item._id}
-                  contentContainerStyle={styles.listContent}
-                  ListEmptyComponent={<NoResultsComponent />}
-                />
+                {loadingProviders ? (
+                  <LoadingComponent />
+                ) : (
+                  <GenericList
+                    data={proveedoresFiltrados}
+                    renderItem={renderProveedor}
+                    keyExtractor={(item) => item._id}
+                    contentContainerStyle={styles.listContent}
+                    ListEmptyComponent={<NoResultsComponent />}
+                    isLoading={false}
+                  />
+                )}
               </View>
             )}
           </View>
@@ -168,16 +205,20 @@ const renderProveedor = (proveedor: Provider) => (
               title="Listado Completo" 
               subtitle="Todos los proveedores disponibles"
             />
-            <GenericList
-              data={providers?.items || []}
-              renderItem={renderProveedor}
-              keyExtractor={(item) => item._id}
-              contentContainerStyle={styles.listContent}
-              onRefresh={handleRefresh}
-              refreshing={isRefreshing}
-              isLoading={loadingProviders}
-              emptyText="No hay proveedores disponibles"
-            />
+            {loadingProviders ? (
+              <LoadingComponent />
+            ) : (
+              <GenericList
+                data={providers?.items || []}
+                renderItem={renderProveedor}
+                keyExtractor={(item) => item._id}
+                contentContainerStyle={styles.listContent}
+                onRefresh={handleRefresh}
+                refreshing={isRefreshing}
+                isLoading={false}
+                emptyText="No hay proveedores disponibles"
+              />
+            )}
           </>
         );
       case 'Favoritos':
@@ -193,6 +234,7 @@ const renderProveedor = (proveedor: Provider) => (
               keyExtractor={(item) => item._id}
               contentContainerStyle={styles.listContent}
               emptyText="No tienes proveedores favoritos"
+              isLoading={false}
             />
           </>
         );
