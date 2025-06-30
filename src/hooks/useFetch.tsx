@@ -16,7 +16,7 @@ const useAxios = <T = any>() => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<any | null>(null);
 
-  const execute = async (config: config): Promise<T | void> => {
+  const execute = async (config: config): Promise<T | null> => {
     setLoading(true);
     try {
       config.url = `${URL_BASE}${config.url}`;
@@ -27,10 +27,12 @@ const useAxios = <T = any>() => {
     } catch (err) {
       setError(err);
       setData(null);
+      return null; // <-- esto antes no estaba
     } finally {
       setLoading(false);
     }
   };
+
 
   return { data, loading, error, execute };
 };

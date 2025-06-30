@@ -4,7 +4,6 @@ type Storage = Record<string, any>;
 
 interface StoreState {
   storage: Storage;
-
   save: (data: Storage) => void;
   get: () => Storage;
   remove: (key: string) => void;

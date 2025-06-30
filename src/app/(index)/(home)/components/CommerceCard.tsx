@@ -1,6 +1,8 @@
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image, Linking, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, Text, TouchableOpacity } from 'react-native';
+
 
 interface CommerceProps {
     _id: string;
@@ -19,8 +21,13 @@ interface CommerceProps {
 }
 
 const CommerceCard = ({ commerce }: { commerce: CommerceProps }) => {
+  const router = useRouter();
+
     return (
-        <View className="bg-white rounded-xl border border-gray-300 w-60 p-3 mr-4 shadow-sm">
+        <TouchableOpacity 
+            className="bg-white rounded-xl border border-gray-300 w-60 p-3 mr-4 shadow-sm"
+            onPress={()=> router.navigate(`/(index)/(Providers)/${commerce._id}`)}
+            >
             <Image
                 source={commerce.image ? { uri: commerce.image } : require("@/src/assets/images/loaderProvider.png")}
                 className="w-full h-32 rounded-lg mb-2"
@@ -46,7 +53,7 @@ const CommerceCard = ({ commerce }: { commerce: CommerceProps }) => {
                     <Icon name="email-plus-outline" size={15} color="black" /> {commerce.props.email}
                 </Text>
             </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
     );
 };
 
