@@ -1,16 +1,20 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
 import FilterPopup from '../../../components/products/FilterPopUp';
 import ProductCard from '../../../components/products/ProductCard';
 import SearchBar from '../../../components/products/productsSearchBar';
 import usefetch from "../../../hooks/useFetch";
-import { getProducts, searchProducts } from '../../../utils/queryProduct'; // Tu archivo de queries
+import {
+  getProductsWithFavorites,
+  searchProductsWithFavorites
+} from '../../../utils/queryProduct';
 
-// Interface para el producto del backend
-interface BackendProduct {
+// Interface para el producto del backend CON información de favoritos
+interface BackendProductWithFavorites {
   _id: string;
   name: string;
   description: string;
@@ -26,17 +30,27 @@ interface BackendProduct {
     name: string;
     parent: string;
   }[];
+  saved_by_user: {
+    _id: string;
+    type: string;
+    from: string;
+    to: string;
+    props?: {
+      type_of_profit: 'mount' | 'percentage';
+      value: number;
+    };
+  }[]; // Array vacío = no guardado, con elementos = guardado
   tags?: string[];
   owner?: string;
   status?: string;
 }
 
-// Interface para la respuesta de la API (igual que en proveedores)
+// Interface para la respuesta de la API
 interface ProductsApiResponse {
   path: string;
   method: string;
   error?: any;
-  items: BackendProduct[];
+  items: BackendProductWithFavorites[];
 }
 
 // Interface para la UI (compatible con tu ProductCard)
@@ -53,17 +67,17 @@ interface Producto {
 }
 
 // Función para transformar datos del backend al formato que espera tu UI
-const transformProduct = (backendProduct: BackendProduct): Producto => {
+const transformProduct = (backendProduct: BackendProductWithFavorites): Producto => {
   return {
     id: backendProduct._id,
     imageUri: backendProduct.image || backendProduct.props?.images?.[0] || '',
     name: backendProduct.name,
-    rating: 4.5, // Por defecto, podrías tener esto en tu backend
+    rating: 4.5, // Por defecto
     category: backendProduct.object_type?.[0]?.name || 'Sin categoría',
     subcategory: backendProduct.object_type?.[0]?.name || 'Sin categoría',
     description: backendProduct.description,
     price: backendProduct.props?.price || 0,
-    favorite: false, // Esto lo manejas localmente
+    favorite: backendProduct.saved_by_user && backendProduct.saved_by_user.length > 0, // TRUE si está guardado
   };
 };
 
@@ -73,14 +87,44 @@ const Index = () => {
   const [activeScreen] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isFilterPopupVisible, setIsFilterPopupVisible] = useState<boolean>(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
-  // Hook para obtener datos del backend (igual que en proveedores)
+  // Hook para obtener datos del backend
   const { data: products, execute: fetchProducts, loading: loadingProducts } = usefetch<ProductsApiResponse>();
+  
+  // Hook para crear/eliminar favoritos
+  const { execute: createFavorite, loading: loadingCreate } = usefetch();
+  const { execute: deleteFavorite, loading: loadingDelete } = usefetch();
 
-  // Obtener productos al cargar el componente
+  // Obtener userData del localStorage
   useEffect(() => {
-    fetchProducts({ method: 'post', url: '/api/findObjects', data: getProducts });
+    const getUserData = async () => {
+      try {
+        const currentUser = await AsyncStorage.getItem('currentUser');
+        if (currentUser) {
+          const userData = JSON.parse(currentUser);
+          setUserId(userData._id); // Ajusta según cómo tengas guardado el ID
+          setUserEmail(userData.email); // Para el tag
+          console.log('✅ Usuario cargado:', userData._id, userData.email);
+        } else {
+          console.log('❌ No hay usuario en localStorage');
+        }
+      } catch (error) {
+        console.error('❌ Error obteniendo userData:', error);
+      }
+    };
+
+    getUserData();
   }, []);
+
+  // Cargar productos con información de favoritos cuando tenemos el userId
+  useEffect(() => {
+    if (userId) {
+      console.log('🔄 Cargando productos con favoritos para userId:', userId);
+      fetchProducts({ method: 'post', url: '/api/findObjects', data: getProductsWithFavorites(userId) });
+    }
+  }, [userId]);
 
   // Efecto para filtrar productos cuando cambia la búsqueda o llegan nuevos datos
   useEffect(() => {
@@ -92,10 +136,8 @@ const Index = () => {
     const transformedProducts = products.items.map(transformProduct);
 
     if (searchQuery.trim() === '') {
-      // Si la búsqueda está vacía, mostrar todos los productos
       setProductosFiltrados(transformedProducts);
     } else {
-      // Filtrar por nombre, categoría o descripción
       const filtrados = transformedProducts.filter(producto => 
         producto.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         producto.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -107,43 +149,101 @@ const Index = () => {
 
   // Función para buscar productos en el backend
   const searchProductsInBackend = async (query: string) => {
+    if (!userId) return;
+
     if (!query.trim()) {
-      // Si no hay query, cargar todos los productos
-      fetchProducts({ method: 'post', url: '/api/findObjects', data: getProducts });
+      fetchProducts({ method: 'post', url: '/api/findObjects', data: getProductsWithFavorites(userId) });
       return;
     }
 
     try {
-      // Buscar en el backend usando tu query de búsqueda
-      await fetchProducts({ method: 'post', url: '/api/findObjects', data: searchProducts(query) });
+      await fetchProducts({ 
+        method: 'post', 
+        url: '/api/findObjects', 
+        data: searchProductsWithFavorites(userId, query) 
+      });
     } catch (error) {
       console.error('Error buscando productos:', error);
-      // En caso de error, mantener la búsqueda local
     }
   };
 
-  // Efecto para manejar búsqueda con delay (como en el ejemplo de proveedores)
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchQuery.trim()) {
         searchProductsInBackend(searchQuery);
       } else {
-        // Si se borra la búsqueda, volver a cargar todos
-        fetchProducts({ method: 'post', url: '/api/findObjects', data: getProducts });
+        if (userId) {
+          fetchProducts({ method: 'post', url: '/api/findObjects', data: getProductsWithFavorites(userId) });
+        }
       }
-    }, 500); // Delay de 500ms para evitar muchas llamadas
+    }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [searchQuery, userId]);
 
-  const handleToggleFavorite = (productId: string) => {
+  const handleToggleFavorite = async (productId: string) => {
+    if (!userId || !userEmail) {
+      Alert.alert('Error', 'No se pudo obtener información del usuario');
+      return;
+    }
+
+    const producto = productosFiltrados.find(p => p.id === productId);
+    if (!producto) return;
+
     setProductosFiltrados(prevProductos => 
-      prevProductos.map(producto => 
-        producto.id === productId 
-          ? { ...producto, favorite: !producto.favorite }
-          : producto
+      prevProductos.map(p => 
+        p.id === productId 
+          ? { ...p, favorite: !p.favorite }
+          : p
       )
     );
+
+    try {
+      if (producto.favorite) {
+        console.log('🗑️ Eliminando de favoritos:', productId);
+        console.log('✅ Producto eliminado de favoritos');
+        
+      } else {
+        console.log('❤️ Agregando a favoritos:', productId);
+        
+        const savedProductData = {
+          type: "saved_product",
+          from: userId,
+          to: productId,
+          tags: [userEmail],
+          props: {
+            type_of_profit: "mount",
+            value: 0
+          }
+        };
+
+        await createFavorite({ 
+          method: 'post', 
+          url: '/api/createObject', 
+          data: savedProductData 
+        });
+        
+        console.log('✅ Producto agregado a favoritos');
+      }
+
+      if (userId) {
+        await fetchProducts({ method: 'post', url: '/api/findObjects', data: getProductsWithFavorites(userId) });
+      }
+
+    } catch (error) {
+      console.error('❌ Error al cambiar favorito:', error);
+      
+      setProductosFiltrados(prevProductos => 
+        prevProductos.map(p => 
+          p.id === productId 
+            ? { ...p, favorite: !p.favorite } 
+            : p
+        )
+      );
+      
+      Alert.alert('Error', 'No se pudo actualizar el favorito. Intenta de nuevo.');
+    }
   };
 
   const handleSearchChange = (text: string) => {
@@ -163,7 +263,6 @@ const Index = () => {
     
     let productosFiltradosTemp = productosFiltrados;
     
-    // Aplicar filtro de categorías
     if (filters.categories && filters.categories.length > 0) {
       productosFiltradosTemp = productosFiltradosTemp.filter(producto =>
         filters.categories.some((cat: string) => 
@@ -173,7 +272,6 @@ const Index = () => {
       );
     }
     
-    // Aplicar filtro de precios
     if (filters.priceRanges && filters.priceRanges.length > 0) {
       productosFiltradosTemp = productosFiltradosTemp.filter(producto => {
         return filters.priceRanges.some((range: string) => {
@@ -190,8 +288,7 @@ const Index = () => {
         });
       });
     }
-    
-    // Aplicar filtro de rating
+       
     if (filters.ratings && filters.ratings.length > 0) {
       productosFiltradosTemp = productosFiltradosTemp.filter(producto => {
         return filters.ratings.some((rating: string) => {
@@ -238,8 +335,10 @@ const Index = () => {
   );
 
   const handleRefresh = () => {
+    if (!userId) return;
+    
     setIsRefreshing(true);
-    fetchProducts({ method: 'post', url: '/api/findObjects', data: getProducts })
+    fetchProducts({ method: 'post', url: '/api/findObjects', data: getProductsWithFavorites(userId) })
       .finally(() => {
         setIsRefreshing(false);
       });
@@ -255,6 +354,19 @@ const Index = () => {
       </Text>
     </View>
   );
+
+  // Mostrar loading si no tenemos userId aún
+  if (!userId) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Cargando información del usuario...</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const renderScreen = () => {
     if (activeScreen) {
@@ -278,7 +390,7 @@ const Index = () => {
             keyExtractor={(item) => item.id}
             ListEmptyComponent={<NoResultsComponent />}
             contentContainerStyle={styles.listContent}
-            isLoading={loadingProducts}
+            isLoading={loadingProducts || loadingCreate || loadingDelete}
             onRefresh={handleRefresh}
             refreshing={isRefreshing}
             emptyText={searchQuery.trim() 
@@ -314,6 +426,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   listContent: {
     padding: 10,

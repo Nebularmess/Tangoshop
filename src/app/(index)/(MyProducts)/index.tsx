@@ -1,16 +1,17 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
 import FilterPopup from '../../../components/products/FilterPopUp';
 import ProductCard from '../../../components/products/ProductCard';
 import SearchBar from '../../../components/products/productsSearchBar';
 import usefetch from "../../../hooks/useFetch";
-import { getProducts, searchProducts } from '../../../utils/queryProduct'; // Tu archivo de queries
+import { getSavedProducts, searchSavedProducts } from '../../../utils/queryProduct'; // Nuevas queries
 
-// Interface para el producto del backend
-interface BackendProduct {
+// Interface para el producto del backend con relación de guardado
+interface BackendSavedProduct {
   _id: string;
   name: string;
   description: string;
@@ -26,17 +27,27 @@ interface BackendProduct {
     name: string;
     parent: string;
   }[];
+  saved_relation: {
+    _id: string;
+    type: string;
+    from: string;
+    to: string;
+    props: {
+      type_of_profit: 'mount' | 'percentage';
+      value: number;
+    };
+  }[];
   tags?: string[];
   owner?: string;
   status?: string;
 }
 
-// Interface para la respuesta de la API (igual que en proveedores)
-interface ProductsApiResponse {
+// Interface para la respuesta de la API
+interface SavedProductsApiResponse {
   path: string;
   method: string;
   error?: any;
-  items: BackendProduct[];
+  items: BackendSavedProduct[];
 }
 
 // Interface para la UI (compatible con tu ProductCard)
@@ -50,20 +61,28 @@ interface Producto {
   description: string;
   price: number;
   favorite: boolean;
+  // Campos adicionales para productos guardados
+  profitType?: 'mount' | 'percentage';
+  profitValue?: number;
 }
 
 // Función para transformar datos del backend al formato que espera tu UI
-const transformProduct = (backendProduct: BackendProduct): Producto => {
+const transformSavedProduct = (backendProduct: BackendSavedProduct): Producto => {
+  const savedRelation = backendProduct.saved_relation?.[0]; // Primer (y único) objeto de relación
+  
   return {
     id: backendProduct._id,
     imageUri: backendProduct.image || backendProduct.props?.images?.[0] || '',
     name: backendProduct.name,
-    rating: 4.5, // Por defecto, podrías tener esto en tu backend
+    rating: 4.5, // Por defecto
     category: backendProduct.object_type?.[0]?.name || 'Sin categoría',
     subcategory: backendProduct.object_type?.[0]?.name || 'Sin categoría',
     description: backendProduct.description,
     price: backendProduct.props?.price || 0,
-    favorite: false, // Esto lo manejas localmente
+    favorite: true, // Todos estos productos son favoritos
+    // Datos del profit
+    profitType: savedRelation?.props?.type_of_profit || 'mount',
+    profitValue: savedRelation?.props?.value || 0,
   };
 };
 
@@ -73,14 +92,37 @@ const Index = () => {
   const [activeScreen] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isFilterPopupVisible, setIsFilterPopupVisible] = useState<boolean>(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Hook para obtener datos del backend (igual que en proveedores)
-  const { data: products, execute: fetchProducts, loading: loadingProducts } = usefetch<ProductsApiResponse>();
+  // Hook para obtener datos del backend
+  const { data: products, execute: fetchProducts, loading: loadingProducts } = usefetch<SavedProductsApiResponse>();
 
-  // Obtener productos al cargar el componente
+  // Obtener userId del localStorage
   useEffect(() => {
-    fetchProducts({ method: 'post', url: '/api/findObjects', data: getProducts });
+    const getUserId = async () => {
+      try {
+        const currentUser = await AsyncStorage.getItem('currentUser');
+        if (currentUser) {
+          const userData = JSON.parse(currentUser);
+          setUserId(userData._id); // O como tengas guardado el ID
+        } else {
+          Alert.alert('Error', 'No se encontró información del usuario');
+        }
+      } catch (error) {
+        console.error('Error obteniendo userId:', error);
+        Alert.alert('Error', 'Error al obtener información del usuario');
+      }
+    };
+
+    getUserId();
   }, []);
+
+  // Cargar productos guardados cuando tenemos el userId
+  useEffect(() => {
+    if (userId) {
+      fetchProducts({ method: 'post', url: '/api/findObjects', data: getSavedProducts(userId) });
+    }
+  }, [userId]);
 
   // Efecto para filtrar productos cuando cambia la búsqueda o llegan nuevos datos
   useEffect(() => {
@@ -89,10 +131,10 @@ const Index = () => {
       return;
     }
 
-    const transformedProducts = products.items.map(transformProduct);
+    const transformedProducts = products.items.map(transformSavedProduct);
 
     if (searchQuery.trim() === '') {
-      // Si la búsqueda está vacía, mostrar todos los productos
+      // Si la búsqueda está vacía, mostrar todos los productos guardados
       setProductosFiltrados(transformedProducts);
     } else {
       // Filtrar por nombre, categoría o descripción
@@ -105,44 +147,59 @@ const Index = () => {
     }
   }, [searchQuery, products]);
 
-  // Función para buscar productos en el backend
-  const searchProductsInBackend = async (query: string) => {
+  // Función para buscar productos guardados en el backend
+  const searchSavedProductsInBackend = async (query: string) => {
+    if (!userId) return;
+
     if (!query.trim()) {
-      // Si no hay query, cargar todos los productos
-      fetchProducts({ method: 'post', url: '/api/findObjects', data: getProducts });
+      // Si no hay query, cargar todos los productos guardados
+      fetchProducts({ method: 'post', url: '/api/findObjects', data: getSavedProducts(userId) });
       return;
     }
 
     try {
-      // Buscar en el backend usando tu query de búsqueda
-      await fetchProducts({ method: 'post', url: '/api/findObjects', data: searchProducts(query) });
+      // Buscar en productos guardados usando tu query de búsqueda
+      await fetchProducts({ method: 'post', url: '/api/findObjects', data: searchSavedProducts(userId, query) });
     } catch (error) {
-      console.error('Error buscando productos:', error);
+      console.error('Error buscando productos guardados:', error);
       // En caso de error, mantener la búsqueda local
     }
   };
 
-  // Efecto para manejar búsqueda con delay (como en el ejemplo de proveedores)
+  // Efecto para manejar búsqueda con delay
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchQuery.trim()) {
-        searchProductsInBackend(searchQuery);
+        searchSavedProductsInBackend(searchQuery);
       } else {
-        // Si se borra la búsqueda, volver a cargar todos
-        fetchProducts({ method: 'post', url: '/api/findObjects', data: getProducts });
+        // Si se borra la búsqueda, volver a cargar todos los productos guardados
+        if (userId) {
+          fetchProducts({ method: 'post', url: '/api/findObjects', data: getSavedProducts(userId) });
+        }
       }
     }, 500); // Delay de 500ms para evitar muchas llamadas
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [searchQuery, userId]);
 
-  const handleToggleFavorite = (productId: string) => {
-    setProductosFiltrados(prevProductos => 
-      prevProductos.map(producto => 
-        producto.id === productId 
-          ? { ...producto, favorite: !producto.favorite }
-          : producto
-      )
+  // Para productos guardados, toggle significa eliminar de favoritos
+  const handleToggleFavorite = async (productId: string) => {
+    Alert.alert(
+      'Eliminar de favoritos',
+      '¿Estás seguro de que quieres eliminar este producto de tus favoritos?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Eliminar', 
+          onPress: () => {
+            // TODO: Aquí llamarías al backend para eliminar la relación saved_product
+            console.log('Eliminar producto de favoritos:', productId);
+            
+            // Por ahora, solo actualizar UI localmente
+            setProductosFiltrados(prev => prev.filter(p => p.id !== productId));
+          }
+        }
+      ]
     );
   };
 
@@ -238,8 +295,10 @@ const Index = () => {
   );
 
   const handleRefresh = () => {
+    if (!userId) return;
+    
     setIsRefreshing(true);
-    fetchProducts({ method: 'post', url: '/api/findObjects', data: getProducts })
+    fetchProducts({ method: 'post', url: '/api/findObjects', data: getSavedProducts(userId) })
       .finally(() => {
         setIsRefreshing(false);
       });
@@ -249,9 +308,12 @@ const Index = () => {
     <View style={styles.noResultsContainer}>
       <Text style={styles.noResultsText}>
         {searchQuery.trim() 
-          ? `No se encontraron productos que coincidan con "${searchQuery}"`
-          : "No hay productos disponibles"
+          ? `No se encontraron productos guardados que coincidan con "${searchQuery}"`
+          : "No tienes productos guardados aún"
         }
+      </Text>
+      <Text style={styles.noResultsSubText}>
+        {!searchQuery.trim() && "Ve a la sección de productos y marca algunos como favoritos"}
       </Text>
     </View>
   );
@@ -261,11 +323,11 @@ const Index = () => {
       return (
         <>
           <Header 
-            title="Productos" 
-            subtitle="¿Qué estás buscando hoy?"
+            title="Mis Productos" 
+            subtitle="Tus productos guardados"
           >
             <SearchBar
-              placeholder="Buscar producto"
+              placeholder="Buscar en mis productos"
               value={searchQuery}
               onChangeText={handleSearchChange}
               onFilterPress={handleFilterPress}
@@ -282,8 +344,8 @@ const Index = () => {
             onRefresh={handleRefresh}
             refreshing={isRefreshing}
             emptyText={searchQuery.trim() 
-              ? `No se encontraron productos que coincidan con "${searchQuery}"`
-              : "No hay productos disponibles"
+              ? `No se encontraron productos guardados que coincidan con "${searchQuery}"`
+              : "No tienes productos guardados"
             }
           />
 
@@ -328,6 +390,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  noResultsSubText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   screenContainer: {
     flex: 1,

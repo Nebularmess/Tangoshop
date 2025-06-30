@@ -154,3 +154,231 @@ export const searchProducts = (searchText: string): object[] => [
     }
   }
 ];
+
+export const getSavedProducts = (userId: string): object[] => [
+  // Primero filtrar solo productos
+  {
+    "$lookup": {
+      "from": "objecttypes",
+      "localField": "type",
+      "foreignField": "_id",
+      "as": "object_type"
+    }
+  },
+  {
+    "$match": { 
+      "object_type.parent": "product",
+      "status": "active"
+    }
+  },
+  
+  {
+    "$lookup": {
+      "from": "objects", 
+      "let": { "productId": "$_id" },
+      "pipeline": [
+        {
+          "$match": {
+            "$expr": {
+              "$and": [
+                { "$eq": ["$type", "saved_product"] },
+                { "$eq": ["$from", userId] }, 
+                { "$eq": ["$to", "$$productId"] } 
+              ]
+            }
+          }
+        }
+      ],
+      "as": "saved_relation"
+    }
+  },
+ 
+  {
+    "$match": {
+      "saved_relation": { "$ne": [] } 
+    }
+  },
+
+  {
+    "$project": {
+      "name": 1,
+      "description": 1,
+      "image": 1,
+      "type": 1,
+      "props.price": 1,
+      "props.images": { "$slice": ["$props.images", 1] },
+      "object_type.name": 1,
+      "saved_relation": 1 
+    }
+  }
+];
+
+
+export const searchSavedProducts = (userId: string, searchText: string): object[] => [
+  
+  {
+    "$lookup": {
+      "from": "objecttypes",
+      "localField": "type",
+      "foreignField": "_id",
+      "as": "object_type"
+    }
+  },
+  {
+    "$match": { 
+      "object_type.parent": "product",
+      "status": "active",
+     
+      "$or": [
+        { "name": { "$regex": searchText, "$options": "i" } },
+        { "description": { "$regex": searchText, "$options": "i" } },
+        { "tags": { "$in": [new RegExp(searchText, "i")] } }
+      ]
+    }
+  },
+  
+  {
+    "$lookup": {
+      "from": "objects",
+      "let": { "productId": "$_id" },
+      "pipeline": [
+        {
+          "$match": {
+            "$expr": {
+              "$and": [
+                { "$eq": ["$type", "saved_product"] },
+                { "$eq": ["$from", userId] },
+                { "$eq": ["$to", "$$productId"] }
+              ]
+            }
+          }
+        }
+      ],
+      "as": "saved_relation"
+    }
+  },
+ 
+  {
+    "$match": {
+      "saved_relation": { "$ne": [] }
+    }
+  },
+  {
+    "$project": {
+      "name": 1,
+      "description": 1,
+      "image": 1,
+      "type": 1,
+      "props.price": 1,
+      "props.images": { "$slice": ["$props.images", 1] },
+      "object_type.name": 1,
+      "saved_relation": 1
+    }
+  }
+];
+
+export const getProductsWithFavorites = (userId: string): object[] => [
+  {
+    "$lookup": {
+      "from": "objecttypes",
+      "localField": "type",
+      "foreignField": "_id",
+      "as": "object_type"
+    }
+  },
+  {
+    "$match": { 
+      "object_type.parent": "product",
+      "status": "active"
+    }
+  },
+  // JOIN con relaciones saved_product para este usuario
+  {
+    "$lookup": {
+      "from": "objects",
+      "let": { "productId": "$_id" },
+      "pipeline": [
+        {
+          "$match": {
+            "$expr": {
+              "$and": [
+                { "$eq": ["$type", "saved_product"] },
+                { "$eq": ["$from", userId] },
+                { "$eq": ["$to", "$$productId"] }
+              ]
+            }
+          }
+        }
+      ],
+      "as": "saved_by_user"
+    }
+  },
+  {
+    "$project": {
+      "name": 1,
+      "description": 1,
+      "image": 1,
+      "type": 1,
+      "props.price": 1,
+      "props.images": { "$slice": ["$props.images", 1] },
+      "object_type.name": 1,
+      "saved_by_user": 1 // Array vacío = no guardado, con elementos = guardado
+    }
+  }
+];
+
+// Query para buscar productos CON información de favoritos
+export const searchProductsWithFavorites = (userId: string, searchText: string): object[] => [
+  {
+    "$lookup": {
+      "from": "objecttypes",
+      "localField": "type",
+      "foreignField": "_id",
+      "as": "object_type"
+    }
+  },
+  {
+    "$match": { 
+      "object_type.parent": "product",
+      "status": "active",
+      "$or": [
+        { "name": { "$regex": searchText, "$options": "i" } },
+        { "description": { "$regex": searchText, "$options": "i" } },
+        { "tags": { "$in": [new RegExp(searchText, "i")] } }
+      ]
+    }
+  },
+  // JOIN con relaciones saved_product
+  {
+    "$lookup": {
+      "from": "objects",
+      "let": { "productId": "$_id" },
+      "pipeline": [
+        {
+          "$match": {
+            "$expr": {
+              "$and": [
+                { "$eq": ["$type", "saved_product"] },
+                { "$eq": ["$from", userId] },
+                { "$eq": ["$to", "$$productId"] }
+              ]
+            }
+          }
+        }
+      ],
+      "as": "saved_by_user"
+    }
+  },
+  {
+    "$project": {
+      "name": 1,
+      "description": 1,
+      "image": 1,
+      "type": 1,
+      "props.price": 1,
+      "props.images": { "$slice": ["$props.images", 1] },
+      "object_type.name": 1,
+      "saved_by_user": 1
+    }
+  }
+];
