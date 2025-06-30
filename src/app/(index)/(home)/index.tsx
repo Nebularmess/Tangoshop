@@ -1,17 +1,25 @@
-import { getCategories, getProviders } from '@/src/utils/querys';
+import useStore from '@/src/hooks/useStorage';
+import { getCategories, getProducts, getProviders } from '@/src/utils/querys';
 import { useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
-import { Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, RefreshControl, SafeAreaView, ScrollView, Text, TouchableOpacity } from 'react-native';
 import Header from '../../../components/header';
 import SectionCard from '../../../components/SectionCard';
 import usefetch from "../../../hooks/useFetch";
 import CommerceCard from './components/CommerceCard';
+import ProductCard from './components/ProductCard';
 
-interface Category {
-  _id: string;
-  name: string;
-  description: string;
-  image: string;
+const loaderProduct = {
+  "_id": "1",
+  "name": "Cargando nombre...",
+  "description": "Cargando descripcion...",
+  "type": "Cargando tipo...",
+  "tags": [],
+  "props": {
+    "price": 0,
+    "images": []
+  },
+  "categorie": "Cargando categoria...",
 }
 
 interface ResApi<T> {
@@ -21,13 +29,13 @@ interface ResApi<T> {
   items: T[];
 }
 
-interface Category {
+interface CategoryProps {
   _id: string;
   name: string;
   description: string;
   image: string;
 }
-type CategoriesRes = ResApi<Category>;
+type CategoriesRes = ResApi<CategoryProps>;
 
 interface CommerceProps {
   _id: string;
@@ -46,20 +54,56 @@ interface CommerceProps {
 }
 type CommercesRes = ResApi<CommerceProps>;
 
+interface ProductProps {
+  _id: string;
+  name: string;
+  description: string;
+  categorie: string;
+  type: string;
+  tags: string[];
+  props: {
+    price: number;
+    images: string[];
+  };
+  saved_product: { _id: string }[];
+}
+type ProductsRes = ResApi<ProductProps>;
+
+
 const Index = () => {
   const router = useRouter();
+  const { get } = useStore();
+  const currentUser = get().currentUser
+  const [refreshing, setRefreshing] = useState(false);
   const { data: categories, execute: fetchCategories, loading: loadingCategories } = usefetch<CategoriesRes>();
   const { data: providers, execute: fetchProviders, loading: loadingProviders } = usefetch<CommercesRes>();
+  const { data: products, execute: fetchProducts, loading: loadingProducts } = usefetch<ProductsRes>();
 
   useEffect(() => {
     fetchCategories({ method: 'post', url: '/api/findObjectsTypes', data: getCategories });
     fetchProviders({ method: 'post', url: '/api/findObjects', data: getProviders });
+    fetchProducts({ method: 'post', url: '/api/findObjects', data: getProducts(currentUser._id) });
   }, [])
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchCategories({ method: 'post', url: '/api/findObjectsTypes', data: getCategories }),
+        fetchProviders({ method: 'post', url: '/api/findObjects', data: getProviders }),
+        fetchProducts({ method: 'post', url: '/api/findObjects', data: getProducts(currentUser._id) })
+      ]);
+    } catch (err) {
+      console.error("Error al recargar datos", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   return (
     <SafeAreaView className='flex-1 bg-gray-200'>
-      <Header title="Joaquin Strusiat" subtitle="¿Qué estás buscando hoy?"></Header>
-      <View className='flex-1 px-2'>
+      <Header title={`${currentUser?.name} ${currentUser?.last_name}`} subtitle="¿Qué estás buscando hoy?"></Header>
+      <ScrollView className='flex-1 px-2' refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
 
         {/* Section Categories */}
         <SectionCard title="Categorías Principales" redirect="/(index)/(Products)">
@@ -93,7 +137,7 @@ const Index = () => {
                 ))}
               </>
             )}
-            {!loadingCategories && categories?.items?.map((item: Category) => (
+            {!loadingCategories && categories?.items?.map((item: CategoryProps) => (
               <TouchableOpacity
                 key={item._id}
                 className='bg-white rounded-lg p-2 mr-3 border border-gray-300'
@@ -152,8 +196,20 @@ const Index = () => {
 
         </SectionCard>
 
-
-      </View>
+        {/* Section Products */}
+        <SectionCard title='Productos principales' redirect={"/(index)/(Products)"}>
+          {loadingProducts && (
+            <>
+              <ProductCard product={loaderProduct} />
+              <ProductCard product={loaderProduct} />
+            </>
+          )}
+          {!loadingProducts && products?.items?.map((product) => (
+            <ProductCard key={product._id} product={product} />
+          ))}
+          {/* <ProductCard product={product}></ProductCard> */}
+        </SectionCard>
+      </ScrollView>
     </SafeAreaView>
   );
 };
