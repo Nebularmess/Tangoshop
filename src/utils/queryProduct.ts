@@ -1,5 +1,12 @@
 // queryProduct.ts
 
+interface ProductFilters {
+  categories?: string[];
+  priceRanges?: string[];
+  ratings?: string[];
+  tags?: string[];
+}
+
 // Query para obtener todos los productos
 export const getProducts: object[] = [
   {
@@ -24,7 +31,8 @@ export const getProducts: object[] = [
       "type": 1, // Categoría del producto
       "props.price": 1, // Precio del producto
       "props.images": { "$slice": ["$props.images", 1] }, // Solo la primera imagen del array
-      "object_type.name": 1 // Nombre de la categoría
+      "object_type.name": 1, // Nombre de la categoría
+      "tags": 1 // Incluir tags
     }
   }
 ];
@@ -54,7 +62,8 @@ export const getProductsByCategory = (categoryType: string): object[] => [
       "type": 1,
       "props.price": 1,
       "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1
+      "object_type.name": 1,
+      "tags": 1
     }
   }
 ];
@@ -84,7 +93,8 @@ export const getProductsByProvider = (providerId: string): object[] => [
       "type": 1,
       "props.price": 1,
       "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1
+      "object_type.name": 1,
+      "tags": 1
     }
   }
 ];
@@ -150,7 +160,8 @@ export const searchProducts = (searchText: string): object[] => [
       "type": 1,
       "props.price": 1,
       "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1
+      "object_type.name": 1,
+      "tags": 1
     }
   }
 ];
@@ -208,11 +219,11 @@ export const getSavedProducts = (userId: string): object[] => [
       "props.price": 1,
       "props.images": { "$slice": ["$props.images", 1] },
       "object_type.name": 1,
-      "saved_relation": 1 
+      "saved_relation": 1,
+      "tags": 1
     }
   }
 ];
-
 
 export const searchSavedProducts = (userId: string, searchText: string): object[] => [
   
@@ -272,7 +283,8 @@ export const searchSavedProducts = (userId: string, searchText: string): object[
       "props.price": 1,
       "props.images": { "$slice": ["$props.images", 1] },
       "object_type.name": 1,
-      "saved_relation": 1
+      "saved_relation": 1,
+      "tags": 1
     }
   }
 ];
@@ -322,7 +334,8 @@ export const getProductsWithFavorites = (userId: string): object[] => [
       "props.price": 1,
       "props.images": { "$slice": ["$props.images", 1] },
       "object_type.name": 1,
-      "saved_by_user": 1 // Array vacío = no guardado, con elementos = guardado
+      "saved_by_user": 1, // Array vacío = no guardado, con elementos = guardado
+      "tags": 1
     }
   }
 ];
@@ -378,7 +391,210 @@ export const searchProductsWithFavorites = (userId: string, searchText: string):
       "props.price": 1,
       "props.images": { "$slice": ["$props.images", 1] },
       "object_type.name": 1,
-      "saved_by_user": 1
+      "saved_by_user": 1,
+      "tags": 1
+    }
+  }
+];
+
+// NUEVAS QUERIES PARA FILTRADO AVANZADO
+
+// Query para filtrar productos con favoritos y filtros específicos
+export const getFilteredProductsWithFavorites = (userId: string, filters: ProductFilters): object[] => {
+  const pipeline: any[] = [
+    {
+      "$lookup": {
+        "from": "objecttypes",
+        "localField": "type",
+        "foreignField": "_id",
+        "as": "object_type"
+      }
+    }
+  ];
+
+  // Construir el match object
+  const matchConditions: any = {
+    "object_type.parent": "product",
+    "status": "active"
+  };
+
+  // Filtro por tags
+  if (filters.tags && filters.tags.length > 0) {
+    matchConditions["tags"] = {
+      "$in": filters.tags
+    };
+  }
+
+  // Filtro por categorías (tipos de objeto)
+  if (filters.categories && filters.categories.length > 0) {
+    matchConditions["object_type.name"] = {
+      "$in": filters.categories
+    };
+  }
+
+  pipeline.push({ "$match": matchConditions });
+
+  // JOIN con relaciones saved_product
+  pipeline.push({
+    "$lookup": {
+      "from": "objects",
+      "let": { "productId": "$_id" },
+      "pipeline": [
+        {
+          "$match": {
+            "$expr": {
+              "$and": [
+                { "$eq": ["$type", "saved_product"] },
+                { "$eq": ["$from", userId] },
+                { "$eq": ["$to", "$$productId"] }
+              ]
+            }
+          }
+        }
+      ],
+      "as": "saved_by_user"
+    }
+  });
+
+  // Projection final
+  pipeline.push({
+    "$project": {
+      "name": 1,
+      "description": 1,
+      "image": 1,
+      "type": 1,
+      "props.price": 1,
+      "props.images": { "$slice": ["$props.images", 1] },
+      "object_type.name": 1,
+      "saved_by_user": 1,
+      "tags": 1
+    }
+  });
+
+  return pipeline;
+};
+
+// Query para buscar productos filtrados con favoritos
+export const searchFilteredProductsWithFavorites = (
+  userId: string, 
+  searchText: string, 
+  filters: ProductFilters
+): object[] => {
+  const pipeline: any[] = [
+    {
+      "$lookup": {
+        "from": "objecttypes",
+        "localField": "type",
+        "foreignField": "_id",
+        "as": "object_type"
+      }
+    }
+  ];
+
+  // Construir el match object
+  const matchConditions: any = {
+    "object_type.parent": "product",
+    "status": "active"
+  };
+
+  // Búsqueda por texto
+  if (searchText.trim()) {
+    matchConditions["$or"] = [
+      { "name": { "$regex": searchText, "$options": "i" } },
+      { "description": { "$regex": searchText, "$options": "i" } },
+      { "tags": { "$in": [new RegExp(searchText, "i")] } }
+    ];
+  }
+
+  // Filtro por tags específicas (AND con la búsqueda de texto)
+  if (filters.tags && filters.tags.length > 0) {
+    matchConditions["tags"] = {
+      "$in": filters.tags
+    };
+  }
+
+  // Filtro por categorías
+  if (filters.categories && filters.categories.length > 0) {
+    matchConditions["object_type.name"] = {
+      "$in": filters.categories
+    };
+  }
+
+  pipeline.push({ "$match": matchConditions });
+
+  // JOIN con relaciones saved_product
+  pipeline.push({
+    "$lookup": {
+      "from": "objects",
+      "let": { "productId": "$_id" },
+      "pipeline": [
+        {
+          "$match": {
+            "$expr": {
+              "$and": [
+                { "$eq": ["$type", "saved_product"] },
+                { "$eq": ["$from", userId] },
+                { "$eq": ["$to", "$$productId"] }
+              ]
+            }
+          }
+        }
+      ],
+      "as": "saved_by_user"
+    }
+  });
+
+  pipeline.push({
+    "$project": {
+      "name": 1,
+      "description": 1,
+      "image": 1,
+      "type": 1,
+      "props.price": 1,
+      "props.images": { "$slice": ["$props.images", 1] },
+      "object_type.name": 1,
+      "saved_by_user": 1,
+      "tags": 1
+    }
+  });
+
+  return pipeline;
+};
+
+// Query para obtener todas las tags únicas disponibles (para el filtro)
+export const getAvailableTags = (): object[] => [
+  {
+    "$lookup": {
+      "from": "objecttypes",
+      "localField": "type",
+      "foreignField": "_id",
+      "as": "object_type"
+    }
+  },
+  {
+    "$match": { 
+      "object_type.parent": "product",
+      "status": "active",
+      "tags": { "$exists": true, "$ne": [] }
+    }
+  },
+  {
+    "$unwind": "$tags"
+  },
+  {
+    "$group": {
+      "_id": "$tags",
+      "count": { "$sum": 1 }
+    }
+  },
+  {
+    "$sort": { "count": -1 }
+  },
+  {
+    "$project": {
+      "_id": 0,
+      "tag": "$_id",
+      "count": 1
     }
   }
 ];
