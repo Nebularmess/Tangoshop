@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface ProductCardProps {
-  id: number;
+  id: string;
   imageUri: string;
   name: string;
   rating: number;
@@ -13,7 +13,7 @@ interface ProductCardProps {
   price: number;
   favorite?: boolean;
   onPress: () => void;
-  onToggleFavorite: (id: number) => void;
+  onToggleFavorite: (id: string) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
