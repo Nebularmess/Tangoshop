@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface ProviderInfoProps {
@@ -16,34 +16,30 @@ const ProviderInfo: React.FC<ProviderInfoProps> = ({
   tags = []
 }) => {
   return (
-    <View className='items-center pt-6 pb-4'>
-      {/* Nombre del proveedor */}
-      <Text className='text-2xl font-bold text-gray-900 text-center mb-2'>
+    <View style={styles.container}>
+      <Text style={styles.name}>
         {name}
       </Text>
       
-      {/* Industria */}
-      <View className='flex-row items-center mb-3'>
+      <View style={styles.industryRow}>
         <MaterialCommunityIcons name="briefcase" size={16} color="#2563EB" />
-        <Text className='text-base text-blue-600 font-medium ml-2'>
+        <Text style={styles.industry}>
           {industry}
         </Text>
       </View>
       
-      {/* Dirección */}
-      <View className='flex-row items-start mb-4 px-4'>
+      <View style={styles.addressRow}>
         <MaterialCommunityIcons name="map-marker" size={16} color="#6B7280" />
-        <Text className='text-sm text-gray-600 ml-2 text-center flex-1'>
+        <Text style={styles.address}>
           {address}
         </Text>
       </View>
       
-      {/* Tags/Etiquetas */}
       {tags.length > 0 && (
-        <View className='flex-row flex-wrap justify-center px-4'>
+        <View style={styles.tagsContainer}>
           {tags.slice(0, 4).map((tag, index) => (
-            <View key={index} className='bg-gray-100 px-3 py-1 rounded-full m-1'>
-              <Text className='text-xs text-gray-700 font-medium'>
+            <View key={index} style={styles.tag}>
+              <Text style={styles.tagText}>
                 {tag}
               </Text>
             </View>
@@ -53,5 +49,62 @@ const ProviderInfo: React.FC<ProviderInfoProps> = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  name: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  industryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  industry: {
+    fontSize: 16,
+    color: '#2563EB',
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  address: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 8,
+    textAlign: 'center',
+    flex: 1,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  tag: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    margin: 4,
+  },
+  tagText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+  },
+});
 
 export default ProviderInfo;

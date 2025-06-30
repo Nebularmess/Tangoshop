@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ViewStyle } from 'react-native';
+import { View, ViewStyle, StyleSheet } from 'react-native';
 
 interface CardContainerProps {
   children: React.ReactNode;
@@ -14,39 +14,33 @@ const CardContainer: React.FC<CardContainerProps> = ({
   padding = 'medium',
   margin = 'medium'
 }) => {
-  const getPaddingClass = () => {
+  const getPaddingStyle = () => {
     switch (padding) {
-      case 'none': return '';
-      case 'small': return 'p-2';
-      case 'medium': return 'p-4';
-      case 'large': return 'p-6';
-      default: return 'p-4';
+      case 'none': return 0;
+      case 'small': return 8;
+      case 'medium': return 16;
+      case 'large': return 24;
+      default: return 16;
     }
   };
 
-  const getMarginClass = () => {
+  const getMarginStyle = () => {
     switch (margin) {
-      case 'none': return '';
-      case 'small': return 'm-2';
-      case 'medium': return 'm-4';
-      case 'large': return 'm-6';
-      default: return 'm-4';
+      case 'none': return 0;
+      case 'small': return 8;
+      case 'medium': return 16;
+      case 'large': return 24;
+      default: return 16;
     }
   };
 
   return (
     <View 
-      className={`bg-white rounded-2xl border border-gray-100 ${getPaddingClass()} ${getMarginClass()}`}
       style={[
+        styles.container,
         {
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: 2,
-          },
-          shadowOpacity: 0.1,
-          shadowRadius: 3.84,
-          elevation: 5,
+          padding: getPaddingStyle(),
+          margin: getMarginStyle(),
         },
         style
       ]}
@@ -55,5 +49,22 @@ const CardContainer: React.FC<CardContainerProps> = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+});
 
 export default CardContainer;

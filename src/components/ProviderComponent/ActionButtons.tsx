@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Linking, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Linking, Alert, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface ActionButtonsProps {
@@ -38,42 +38,78 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   };
 
   return (
-    <View className='px-4 py-3'>
-      <View className='flex-row space-x-3'>
-        {/* Botón Llamar - AZUL */}
+    <View style={styles.container}>
+      <View style={styles.buttonRow}>
         <TouchableOpacity
           onPress={handleCall}
-          className='flex-1 bg-blue-600 rounded-xl py-4 flex-row items-center justify-center'
+          style={styles.actionButton}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons name="phone" size={20} color="white" />
-          <Text className='text-white font-bold ml-2'>Llamar</Text>
+          <Text style={styles.buttonText}>Llamar</Text>
         </TouchableOpacity>
 
-        {/* Botón Mensaje - AZUL (era verde) */}
         <TouchableOpacity
           onPress={handleMessage}
-          className='flex-1 bg-blue-600 rounded-xl py-4 flex-row items-center justify-center'
+          style={styles.actionButton}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons name="message-text" size={20} color="white" />
-          <Text className='text-white font-bold ml-2'>Mensaje</Text>
+          <Text style={styles.buttonText}>Mensaje</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Botón de Email (opcional, más pequeño) */}
       {email && (
         <TouchableOpacity
           onPress={handleEmail}
-          className='mt-3 bg-gray-100 rounded-xl py-3 flex-row items-center justify-center'
+          style={styles.emailButton}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons name="email-outline" size={18} color="#374151" />
-          <Text className='text-gray-700 font-medium ml-2'>Enviar Email</Text>
+          <Text style={styles.emailButtonText}>Enviar Email</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  emailButton: {
+    marginTop: 12,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emailButtonText: {
+    color: '#374151',
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+});
 
 export default ActionButtons;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -34,14 +34,11 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
     if (onPress) {
       onPress(provider);
     } else {
-      // Navegar a la pantalla de detalle
       router.push(`/(index)/(Providers)/${provider._id}`);
     }
   };
 
-  // Función para extraer ciudad y provincia de la dirección
   const parseAddress = (address: string) => {
-    // Formato esperado: "Calle 123 - Ciudad - Provincia"
     const parts = address.split(' - ');
     if (parts.length >= 3) {
       const street = parts[0];
@@ -58,93 +55,64 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
     return (
       <TouchableOpacity
         onPress={handlePress}
-        className='bg-white rounded-lg mx-2 mb-3 border border-gray-200'
+        style={styles.verticalCard}
         activeOpacity={0.8}
-        style={{
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: 1,
-          },
-          shadowOpacity: 0.1,
-          shadowRadius: 2,
-          elevation: 2,
-        }}
       >
-        <View className='p-4'>
-          <View className='flex-row items-start space-x-3'>
-            {/* Logo del proveedor */}
+        <View style={styles.cardContent}>
+          <View style={styles.headerRow}>
             <Image
               source={{ uri: provider.image }}
-              className='w-12 h-12 rounded-lg bg-gray-100'
+              style={styles.avatar}
               resizeMode='cover'
             />
 
-            {/* Información del proveedor */}
-            <View className='flex-1'>
-              {/* Nombre del proveedor */}
-              <Text className='text-base font-bold text-gray-900 mb-1' numberOfLines={1}>
+            <View style={styles.mainInfo}>
+              <Text style={styles.providerName} numberOfLines={1}>
                 {provider.name}
               </Text>
               
-              {/* Industria con ícono */}
-              <View className='flex-row items-center mb-2'>
+              <View style={styles.industryRow}>
                 <MaterialCommunityIcons name="briefcase" size={16} color="#2563EB" />
-                <Text className='text-sm text-blue-600 font-medium ml-2' numberOfLines={1}>
+                <Text style={styles.industryText} numberOfLines={1}>
                   {provider.props.industry}
                 </Text>
               </View>
-              
-              {/* Dirección (solo calle) con ícono - removido porque ahora va abajo */}
-              {/* <View className='flex-row items-start mb-2'>
-                <MaterialCommunityIcons name="map-marker" size={16} color="#6B7280" />
-                <Text className='text-sm text-gray-600 ml-2 flex-1' numberOfLines={1}>
-                  {street}
-                </Text>
-              </View> */}
 
-              {/* Fila de información adicional */}
-              <View className='flex-row justify-between items-start'>
-                {/* Columna izquierda: Teléfono y Email */}
-                <View className='flex-1 mr-2'>
-                  {/* Teléfono */}
+              <View style={styles.contactRow}>
+                <View style={styles.contactLeft}>
                   {provider.props.phone_number && (
-                    <View className='flex-row items-center mb-1'>
+                    <View style={styles.contactItem}>
                       <MaterialCommunityIcons name="phone" size={14} color="#6B7280" />
-                      <Text className='text-xs text-gray-600 ml-1 flex-1' numberOfLines={1}>
+                      <Text style={styles.contactText} numberOfLines={1}>
                         {provider.props.phone_number}
                       </Text>
                     </View>
                   )}
                   
-                  {/* Email - sin numberOfLines para mostrar completo */}
                   {provider.props.email && (
-                    <View className='flex-row items-start'>
-                      <MaterialCommunityIcons name="email" size={14} color="#6B7280" style={{ marginTop: 1 }} />
-                      <Text className='text-xs text-gray-600 ml-1 flex-1'>
+                    <View style={styles.contactItem}>
+                      <MaterialCommunityIcons name="email" size={14} color="#6B7280" />
+                      <Text style={styles.contactText}>
                         {provider.props.email}
                       </Text>
                     </View>
                   )}
                 </View>
 
-                {/* Columna derecha: Ciudad-Provincia y Dirección */}
-                <View className='flex-1 items-end'>
-                  {/* Ciudad y Provincia juntos */}
+                <View style={styles.contactRight}>
                   {(city || province) && (
-                    <View className='flex-row items-center mb-1'>
+                    <View style={styles.contactItem}>
                       <MaterialCommunityIcons name="map-marker" size={14} color="#6B7280" />
-                      <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
+                      <Text style={styles.contactText} numberOfLines={1}>
                         {city}{city && province ? ', ' : ''}{province}
                       </Text>
                     </View>
                   )}
                   
-                  {/* Dirección (calle) */}
                   {street && (
-                    <View className='flex-row items-center'>
+                    <View style={styles.contactItem}>
                       <MaterialCommunityIcons name="home" size={14} color="#6B7280" />
-                      <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
+                      <Text style={styles.contactText} numberOfLines={1}>
                         {street}
                       </Text>
                     </View>
@@ -153,8 +121,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
               </View>
             </View>
 
-            {/* Flecha de navegación */}
-            <View className='self-center ml-2'>
+            <View style={styles.chevronContainer}>
               <MaterialCommunityIcons name="chevron-right" size={20} color="#9CA3AF" />
             </View>
           </View>
@@ -163,98 +130,73 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
     );
   }
 
-  // Variant horizontal
   return (
     <TouchableOpacity
       onPress={handlePress}
-      className='bg-white rounded-xl mr-3 border border-gray-100 shadow-sm overflow-hidden'
-      style={{ width: 280 }}
+      style={styles.horizontalCard}
       activeOpacity={0.8}
     >
-      {/* Header con imagen */}
-      <View className='relative'>
+      <View style={styles.imageContainer}>
         <Image
           source={{ uri: provider.image }}
-          className='w-full h-32 bg-gray-100'
+          style={styles.headerImage}
           resizeMode='cover'
         />
-        {/* Overlay gradient */}
-        <View className='absolute inset-0 bg-gradient-to-t from-black/20 to-transparent' />
+        <View style={styles.overlay} />
         
-        {/* Badge de comercio */}
-        <View className='absolute top-2 right-2 bg-white/90 rounded-full px-2 py-1 flex-row items-center'>
+        <View style={styles.badge}>
           <MaterialCommunityIcons name="store" size={12} color="#2563EB" />
-          <Text className='text-xs font-medium text-blue-600 ml-1'>Comercio</Text>
+          <Text style={styles.badgeText}>Comercio</Text>
         </View>
       </View>
 
-      {/* Contenido */}
-      <View className='p-4'>
-        {/* Nombre */}
-        <Text className='text-lg font-bold text-gray-900 mb-2' numberOfLines={1}>
+      <View style={styles.horizontalContent}>
+        <Text style={styles.horizontalName} numberOfLines={1}>
           {provider.name}
         </Text>
         
-        {/* Industria */}
-        <View className='flex-row items-center mb-3'>
-          <View className='bg-blue-100 px-3 py-1 rounded-full flex-row items-center'>
-            <MaterialCommunityIcons name="briefcase-outline" size={12} color="#2563EB" />
-            <Text className='text-xs font-medium text-blue-700 ml-1' numberOfLines={1}>
-              {provider.props.industry}
-            </Text>
-          </View>
-        </View>
-        
-        {/* Dirección (solo calle) - removido porque ahora va en la columna derecha */}
-        {/* <View className='flex-row items-start mb-3'>
-          <MaterialCommunityIcons name="map-marker-outline" size={14} color="#6B7280" />
-          <Text className='text-sm text-gray-600 ml-1 flex-1 leading-5' numberOfLines={1}>
-            {street}
+        <View style={styles.industryBadge}>
+          <MaterialCommunityIcons name="briefcase-outline" size={12} color="#2563EB" />
+          <Text style={styles.industryBadgeText} numberOfLines={1}>
+            {provider.props.industry}
           </Text>
-        </View> */}
+        </View>
 
-        {/* Información de contacto y ubicación */}
-        <View className='flex-row justify-between items-start mb-3'>
-          {/* Columna izquierda: Contacto */}
-          <View className='flex-1 mr-2'>
-            {/* Teléfono */}
+        <View style={styles.horizontalContactRow}>
+          <View style={styles.contactLeft}>
             {provider.props.phone_number && (
-              <View className='flex-row items-center mb-1'>
+              <View style={styles.contactItem}>
                 <MaterialCommunityIcons name="phone" size={12} color="#6B7280" />
-                <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
+                <Text style={styles.smallContactText} numberOfLines={1}>
                   {provider.props.phone_number}
                 </Text>
               </View>
             )}
             
-            {/* Email - sin numberOfLines */}
             {provider.props.email && (
-              <View className='flex-row items-start'>
-                <MaterialCommunityIcons name="email" size={12} color="#6B7280" style={{ marginTop: 1 }} />
-                <Text className='text-xs text-gray-600 ml-1'>
+              <View style={styles.contactItem}>
+                <MaterialCommunityIcons name="email" size={12} color="#6B7280" />
+                <Text style={styles.smallContactText}>
                   {provider.props.email}
                 </Text>
               </View>
             )}
           </View>
 
-          {/* Columna derecha: Ubicación */}
-          <View className='flex-1 items-end'>
-            {/* Ciudad y Provincia juntos */}
+          <View style={styles.contactRight}>
             {(city || province) && (
-              <View className='flex-row items-center mb-1'>
+              <View style={styles.contactItem}>
                 <MaterialCommunityIcons name="map-marker" size={12} color="#6B7280" />
-                <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
+                <Text style={styles.smallContactText} numberOfLines={1}>
                   {city}{city && province ? ', ' : ''}{province}
                 </Text>
               </View>
             )}
             
-            {/* Dirección (calle) */}
             {street && (
-              <View className='flex-row items-center'>
+              <View style={styles.contactItem}>
                 <MaterialCommunityIcons name="home" size={12} color="#6B7280" />
-                <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
+                <Text style={styles.smallContactText} numberOfLines={1}>
                   {street}
                 </Text>
               </View>
@@ -262,13 +204,187 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
           </View>
         </View>
 
-        {/* Footer simple */}
-        <View className='flex-row items-center justify-end border-t border-gray-100 pt-3'>
+        <View style={styles.footer}>
           <MaterialCommunityIcons name="chevron-right" size={16} color="#9CA3AF" />
         </View>
       </View>
     </TouchableOpacity>
   );
 };
+
+const styles = StyleSheet.create({
+  verticalCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    marginHorizontal: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  cardContent: {
+    padding: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    marginRight: 12,
+  },
+  mainInfo: {
+    flex: 1,
+  },
+  providerName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  industryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  industryText: {
+    fontSize: 14,
+    color: '#2563EB',
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  contactRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  contactLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  contactRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  contactText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 4,
+    flex: 1,
+  },
+  chevronContainer: {
+    alignSelf: 'center',
+    marginLeft: 8,
+  },
+  horizontalCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    width: 280,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  imageContainer: {
+    position: 'relative',
+  },
+  headerImage: {
+    width: '100%',
+    height: 128,
+    backgroundColor: '#F3F4F6',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  badge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#2563EB',
+    marginLeft: 4,
+  },
+  horizontalContent: {
+    padding: 16,
+  },
+  horizontalName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  industryBadge: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+  industryBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#1D4ED8',
+    marginLeft: 4,
+  },
+  horizontalContactRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  smallContactText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 4,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 12,
+  },
+});
 
 export default ProviderCard;

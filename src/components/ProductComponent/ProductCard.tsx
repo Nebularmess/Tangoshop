@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -35,12 +35,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
     if (onPress) {
       onPress(product);
     } else {
-      // Navegar a pantalla de detalle del producto
       router.push(`/(index)/(Products)/${product._id}`);
     }
   };
 
-  // Obtener la imagen a mostrar (prioridad: props.images[0] > image)
   const getProductImage = () => {
     if (product.props.images && product.props.images.length > 0) {
       return product.props.images[0];
@@ -51,7 +49,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
     return null;
   };
 
-  // Formatear precio
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -61,7 +58,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }).format(price);
   };
 
-  // Obtener nombre de categoría
   const getCategoryName = () => {
     return product.object_type?.[0]?.name || product.type;
   };
@@ -72,64 +68,47 @@ const ProductCard: React.FC<ProductCardProps> = ({
     return (
       <TouchableOpacity
         onPress={handlePress}
-        className='bg-white rounded-lg mx-2 mb-3 border border-gray-200'
+        style={styles.listCard}
         activeOpacity={0.8}
-        style={{
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: 1,
-          },
-          shadowOpacity: 0.1,
-          shadowRadius: 2,
-          elevation: 2,
-        }}
       >
-        <View className='p-4'>
-          <View className='flex-row items-start space-x-3'>
-            {/* Imagen del producto */}
-            <View className='w-16 h-16 rounded-lg bg-gray-100 overflow-hidden'>
+        <View style={styles.listContent}>
+          <View style={styles.listRow}>
+            <View style={styles.listImageContainer}>
               {productImage ? (
                 <Image
                   source={{ uri: productImage }}
-                  className='w-full h-full'
+                  style={styles.listImage}
                   resizeMode='cover'
                 />
               ) : (
-                <View className='w-full h-full bg-gray-200 items-center justify-center'>
+                <View style={styles.listImagePlaceholder}>
                   <MaterialCommunityIcons name="image-off" size={24} color="#9CA3AF" />
                 </View>
               )}
             </View>
 
-            {/* Información del producto */}
-            <View className='flex-1'>
-              {/* Categoría */}
-              <View className='flex-row items-center mb-1'>
+            <View style={styles.listInfo}>
+              <View style={styles.categoryRow}>
                 <MaterialCommunityIcons name="tag" size={14} color="#6B7280" />
-                <Text className='text-xs text-gray-500 ml-1 uppercase font-medium'>
+                <Text style={styles.categoryText}>
                   {getCategoryName()}
                 </Text>
               </View>
 
-              {/* Nombre del producto */}
-              <Text className='text-base font-bold text-gray-900 mb-1' numberOfLines={1}>
+              <Text style={styles.listProductName} numberOfLines={1}>
                 {product.name}
               </Text>
               
-              {/* Descripción */}
-              <Text className='text-sm text-gray-600 mb-2' numberOfLines={2}>
+              <Text style={styles.listDescription} numberOfLines={2}>
                 {product.description}
               </Text>
 
-              {/* Precio */}
-              <Text className='text-lg font-bold text-green-600'>
+              <Text style={styles.listPrice}>
                 {formatPrice(product.props.price)}
               </Text>
             </View>
 
-            {/* Flecha de navegación */}
-            <View className='self-center ml-2'>
+            <View style={styles.listChevron}>
               <MaterialCommunityIcons name="chevron-right" size={20} color="#9CA3AF" />
             </View>
           </View>
@@ -138,80 +117,59 @@ const ProductCard: React.FC<ProductCardProps> = ({
     );
   }
 
-  // Variant grid (por defecto)
   return (
     <TouchableOpacity
       onPress={handlePress}
-      className='bg-white rounded-xl mr-3 mb-3 border border-gray-200 overflow-hidden'
+      style={styles.gridCard}
       activeOpacity={0.8}
-      style={{
-        width: 180,
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 3,
-      }}
     >
-      {/* Imagen del producto */}
-      <View className='relative h-32 bg-gray-100'>
+      <View style={styles.gridImageContainer}>
         {productImage ? (
           <Image
             source={{ uri: productImage }}
-            className='w-full h-full'
+            style={styles.gridImage}
             resizeMode='cover'
           />
         ) : (
-          <View className='w-full h-full bg-gray-200 items-center justify-center'>
+          <View style={styles.gridImagePlaceholder}>
             <MaterialCommunityIcons name="image-off" size={32} color="#9CA3AF" />
           </View>
         )}
         
-        {/* Badge de categoría */}
-        <View className='absolute top-2 left-2 bg-white/90 rounded-full px-2 py-1'>
-          <Text className='text-xs font-medium text-gray-700'>
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryBadgeText}>
             {getCategoryName()}
           </Text>
         </View>
 
-        {/* Icono de favorito (placeholder) */}
         <TouchableOpacity 
-          className='absolute top-2 right-2 bg-white/90 rounded-full p-1'
+          style={styles.favoriteButton}
           onPress={(e) => {
             e.stopPropagation();
-            // Lógica de favoritos aquí
           }}
         >
           <MaterialCommunityIcons name="heart-outline" size={16} color="#6B7280" />
         </TouchableOpacity>
       </View>
 
-      {/* Contenido */}
-      <View className='p-3'>
-        {/* Nombre del producto */}
-        <Text className='text-sm font-bold text-gray-900 mb-1' numberOfLines={2}>
+      <View style={styles.gridContent}>
+        <Text style={styles.gridProductName} numberOfLines={2}>
           {product.name}
         </Text>
         
-        {/* Descripción */}
-        <Text className='text-xs text-gray-600 mb-3' numberOfLines={2}>
+        <Text style={styles.gridDescription} numberOfLines={2}>
           {product.description}
         </Text>
 
-        {/* Precio y botón */}
-        <View className='flex-row items-center justify-between'>
-          <Text className='text-base font-bold text-green-600' numberOfLines={1}>
+        <View style={styles.gridFooter}>
+          <Text style={styles.gridPrice} numberOfLines={1}>
             {formatPrice(product.props.price)}
           </Text>
           
           <TouchableOpacity 
-            className='bg-blue-600 rounded-lg px-2 py-1'
+            style={styles.cartButton}
             onPress={(e) => {
               e.stopPropagation();
-              // Lógica de agregar al carrito aquí
             }}
           >
             <MaterialCommunityIcons name="cart-plus" size={16} color="white" />
@@ -221,5 +179,172 @@ const ProductCard: React.FC<ProductCardProps> = ({
     </TouchableOpacity>
   );
 };
+
+const styles = StyleSheet.create({
+  listCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    marginHorizontal: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  listContent: {
+    padding: 16,
+  },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  listImageContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    overflow: 'hidden',
+    marginRight: 12,
+  },
+  listImage: {
+    width: '100%',
+    height: '100%',
+  },
+  listImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listInfo: {
+    flex: 1,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  categoryText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 4,
+    textTransform: 'uppercase',
+    fontWeight: '500',
+  },
+  listProductName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  listDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  listPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#059669',
+  },
+  listChevron: {
+    alignSelf: 'center',
+    marginLeft: 8,
+  },
+  gridCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginRight: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    width: 180,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  gridImageContainer: {
+    position: 'relative',
+    height: 128,
+    backgroundColor: '#F3F4F6',
+  },
+  gridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gridImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  categoryBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  gridContent: {
+    padding: 12,
+  },
+  gridProductName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  gridDescription: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 12,
+  },
+  gridFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  gridPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#059669',
+    flex: 1,
+  },
+  cartButton: {
+    backgroundColor: '#2563EB',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+});
 
 export default ProductCard;

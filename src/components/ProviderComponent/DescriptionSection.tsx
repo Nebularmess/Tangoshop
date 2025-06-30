@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 interface DescriptionSectionProps {
   title: string;
@@ -15,9 +15,6 @@ const DescriptionSection: React.FC<DescriptionSectionProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [showReadMore, setShowReadMore] = useState(false);
 
-  // Debug log para verificar qué descripción llega
-  console.log('🔍 DescriptionSection recibió:', { title, description: description?.substring(0, 50) + '...' });
-
   const handleTextLayout = (event: any) => {
     const { lines } = event.nativeEvent;
     if (lines.length > maxLines) {
@@ -25,35 +22,31 @@ const DescriptionSection: React.FC<DescriptionSectionProps> = ({
     }
   };
 
-  // Si no hay descripción, no mostrar el componente
   if (!description || description.trim().length === 0) {
     return null;
   }
 
   return (
-    <View className='px-4 py-3'>
-      {/* Título de la sección */}
-      <Text className='text-lg font-bold text-gray-900 mb-3'>
+    <View style={styles.container}>
+      <Text style={styles.title}>
         {title}
       </Text>
       
-      {/* Descripción */}
       <Text
-        className='text-sm text-gray-600 leading-6'
+        style={styles.description}
         numberOfLines={isExpanded ? undefined : maxLines}
         onTextLayout={!isExpanded ? handleTextLayout : undefined}
       >
         {description}
       </Text>
       
-      {/* Botón Ver más/Ver menos */}
       {showReadMore && (
         <TouchableOpacity
           onPress={() => setIsExpanded(!isExpanded)}
-          className='mt-2'
+          style={styles.readMoreButton}
           activeOpacity={0.7}
         >
-          <Text className='text-blue-600 font-medium text-sm'>
+          <Text style={styles.readMoreText}>
             {isExpanded ? 'Ver menos' : 'Ver más'}
           </Text>
         </TouchableOpacity>
@@ -61,5 +54,31 @@ const DescriptionSection: React.FC<DescriptionSectionProps> = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  description: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 24,
+  },
+  readMoreButton: {
+    marginTop: 8,
+  },
+  readMoreText: {
+    color: '#2563EB',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+});
 
 export default DescriptionSection;

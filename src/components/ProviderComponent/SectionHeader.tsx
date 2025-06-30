@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface SectionHeaderProps {
@@ -20,41 +20,38 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
   icon
 }) => {
   return (
-    <View className='px-4 py-3 border-b border-gray-100'>
-      <View className='flex-row items-center justify-between'>
-        <View className='flex-row items-center flex-1'>
-          {/* Icono opcional */}
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <View style={styles.leftContent}>
           {icon && (
             <MaterialCommunityIcons 
               name={icon as any} 
               size={20} 
               color="#374151" 
-              style={{ marginRight: 8 }}
+              style={styles.icon}
             />
           )}
           
-          {/* Título y subtítulo */}
-          <View className='flex-1'>
-            <Text className='text-lg font-bold text-gray-900'>
+          <View style={styles.textContainer}>
+            <Text style={styles.title}>
               {title}
             </Text>
             {subtitle && (
-              <Text className='text-sm text-gray-500 mt-1'>
+              <Text style={styles.subtitle}>
                 {subtitle}
               </Text>
             )}
           </View>
         </View>
 
-        {/* Acción opcional */}
         {(actionText || showArrow) && (
           <TouchableOpacity
             onPress={onActionPress}
-            className='flex-row items-center'
+            style={styles.actionButton}
             activeOpacity={0.7}
           >
             {actionText && (
-              <Text className='text-blue-600 font-medium mr-1'>
+              <Text style={styles.actionText}>
                 {actionText}
               </Text>
             )}
@@ -67,5 +64,49 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  leftContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  icon: {
+    marginRight: 8,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionText: {
+    color: '#2563EB',
+    fontWeight: '500',
+    marginRight: 4,
+  },
+});
 
 export default SectionHeader;
