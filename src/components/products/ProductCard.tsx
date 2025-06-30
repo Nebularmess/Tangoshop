@@ -39,37 +39,82 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
-      {/* Imagen del producto */}
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: imageUri }} style={styles.productImage} />
-      </View>
+      <View style={styles.contentWrapper}>
+        <View style={styles.mainContent}>
+          {/* Imagen del producto */}
+          <Image source={{ uri: imageUri }} style={styles.productImage} />
 
-      {/* Contenido del producto */}
-      <View style={styles.contentContainer}>
-        {/* Rating y categoría */}
-        <View style={styles.topSection}>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={14} color="#FFD700" />
-            <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+          {/* Información del producto */}
+          <View style={styles.infoContainer}>
+            {/* Nombre del producto */}
+            <Text style={styles.productName} numberOfLines={1}>
+              {name}
+            </Text>
+            
+            {/* Rating y categoría */}
+            <View style={styles.ratingCategoryRow}>
+              <View style={styles.ratingBadge}>
+                <Ionicons name="star" size={12} color="#2563EB" />
+                <Text style={styles.ratingText}>
+                  {rating.toFixed(1)}
+                </Text>
+              </View>
+            </View>
+            
+            {/* Información adicional */}
+            <View style={styles.detailsRow}>
+              {/* Columna izquierda: Descripción y subcategoría */}
+              <View style={styles.leftColumn}>
+                {description && (
+                  <View style={styles.detailItem}>
+                    <Ionicons name="information-circle" size={14} color="#6B7280" />
+                    <Text style={styles.detailText} numberOfLines={1}>
+                      {description}
+                    </Text>
+                  </View>
+                )}
+                
+                {subcategory && (
+                  <View style={styles.detailItem}>
+                    <Ionicons name="pricetag" size={14} color="#6B7280" style={{ marginTop: 1 }} />
+                    <Text style={styles.detailText}>
+                      {subcategory}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Columna derecha: Categoría y Precio */}
+              <View style={styles.rightColumn}>
+                {category && (
+                  <View style={styles.detailItemRight}>
+                    <Ionicons name="apps" size={14} color="#6B7280" />
+                    <Text style={styles.detailText} numberOfLines={1}>
+                      {category}
+                    </Text>
+                  </View>
+                )}
+                
+                <View style={styles.detailItemRight}>
+                  <Ionicons name="cash" size={14} color="#6B7280" />
+                  <Text style={styles.detailText} numberOfLines={1}>
+                    {formatPrice(price)}
+                  </Text>
+                </View>
+              </View>
+            </View>
           </View>
-          <Text style={styles.categoryText}>{category}</Text>
+
+          {/* Flecha de navegación */}
+          <View style={styles.chevronContainer}>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </View>
         </View>
-
-        {/* Nombre del producto */}
-        <Text style={styles.productName}>{name}</Text>
-
-        {/* Descripción y subcategoría */}
-        <Text style={styles.productDescription}>
-          {description} {subcategory}
-        </Text>
-
-        {/* Precio */}
-        <Text style={styles.priceText}>{formatPrice(price)}</Text>
       </View>
 
       {/* Icono de favorito */}
       <TouchableOpacity style={styles.favoriteButton} onPress={handleToggleFavorite}>
-        <Ionicons name={favorite? "heart" :"heart-outline"} size={20} color={favorite? "#FF4444" : "#666"} />
+        <Ionicons name={favorite ? "heart" : "heart-outline"} size={20} color={favorite ? "#FF4444" : "#666"} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -78,77 +123,97 @@ const ProductCard: React.FC<ProductCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
-    marginVertical: 6,
-    marginHorizontal: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 8,
+    marginHorizontal: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 2,
+    elevation: 2,
     position: 'relative',
   },
-  imageContainer: {
-    marginRight: 12,
+  contentWrapper: {
+    padding: 16,
   },
-  productImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    backgroundColor: '#F5F5F5',
-  },
-  contentContainer: {
-    flex: 1,
+  mainContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
-  topSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
+  productImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    marginRight: 12,
   },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF8E1',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginRight: 8,
-  },
-  ratingText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#F57C00',
-    marginLeft: 2,
-  },
-  categoryText: {
-    fontSize: 12,
-    color: '#888',
-    fontWeight: '500',
+  infoContainer: {
+    flex: 1,
   },
   productName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#333',
-    marginBottom: 2,
+    color: '#111827',
+    marginBottom: 4,
     lineHeight: 20,
   },
-  productDescription: {
-    fontSize: 13,
-    color: '#666',
+  ratingCategoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
-    lineHeight: 16,
   },
-  priceText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#000',
+  ratingBadge: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#1D4ED8',
+    marginLeft: 4,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  leftColumn: {
+    flex: 1,
+    marginRight: 8,
+  },
+  rightColumn: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  detailItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  detailText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 4,
+    flex: 1,
+  },
+  chevronContainer: {
+    alignSelf: 'center',
+    marginLeft: 8,
   },
   favoriteButton: {
     position: 'absolute',
