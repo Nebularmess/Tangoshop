@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Header from '../../../components/header';
 import useStore from '../../../hooks/useStorage';
@@ -17,7 +17,9 @@ interface SettingOption {
 
 const Index = () => {
   const [activeScreen, setActiveScreen] = useState<Screen>('Configuracion');
-  const { remove: removeFromStorage } = useStore();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  const { clear: clearStorage } = useStore();
 
   const handleEditarCuenta = () => {
     router.push('/(index)/(Setings)/editarPerfil');
@@ -43,28 +45,52 @@ const Index = () => {
         {
           text: 'Cerrar Sesión',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              // Limpiar AsyncStorage
-              await AsyncStorage.removeItem('currentUser');
-              await AsyncStorage.removeItem('authToken');
-              
-              // Limpiar Storage local (Zustand)
-              removeFromStorage('currentUser');
-              removeFromStorage('authToken');
-              
-              console.log('Sesión cerrada exitosamente');
-              
-              // Redirigir al usuario a la pantalla de términos y condiciones
-              router.replace('/(auth)/termsAgree');
-            } catch (error) {
-              console.error('Error al cerrar sesión:', error);
-              Alert.alert('Error', 'No se pudo cerrar la sesión correctamente');
-            }
-          },
+          onPress: performLogout,
         },
       ]
     );
+  };
+
+  const performLogout = async () => {
+    setIsLoggingOut(true);
+    
+    try {
+      if (Platform.OS === 'web') {
+        // Limpiar web storage
+        clearStorage();
+        if (typeof window !== 'undefined') {
+          window.localStorage?.clear();
+          window.sessionStorage?.clear();
+        }
+      } else {
+        // Limpiar móvil storage
+        await AsyncStorage.clear();
+        clearStorage();
+      }
+      
+      // Navegar a términos
+      router.replace('/(auth)/termsAgree');
+      
+    } catch (error) {
+      console.error('Error en logout:', error);
+      
+      // Fallback: limpiar lo que se pueda y navegar
+      try {
+        clearStorage();
+        if (Platform.OS === 'web') {
+          window.localStorage?.clear();
+          window.sessionStorage?.clear();
+        } else {
+          await AsyncStorage.clear();
+        }
+        router.replace('/(auth)/termsAgree');
+      } catch (fallbackError) {
+        // Último recurso: solo navegar
+        router.replace('/(auth)/termsAgree');
+      }
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   const settingsOptions: SettingOption[] = [
@@ -89,7 +115,11 @@ const Index = () => {
   ];
 
   const SettingItem = ({ option }: { option: SettingOption }) => (
-    <TouchableOpacity style={styles.settingItem} onPress={option.onPress}>
+    <TouchableOpacity 
+      style={styles.settingItem} 
+      onPress={option.onPress}
+      disabled={isLoggingOut}
+    >
       <View style={styles.settingItemContent}>
         <View style={styles.iconContainer}>
           {option.icon}
@@ -114,14 +144,29 @@ const Index = () => {
                 <SettingItem key={option.id} option={option} />
               ))}
             </View>
+
             <View style={styles.logoutSection}>
-              <TouchableOpacity style={styles.logoutButton} onPress={handleCerrarSesion}>
+              <TouchableOpacity 
+                style={[
+                  styles.logoutButton,
+                  isLoggingOut && styles.logoutButtonDisabled
+                ]} 
+                onPress={handleCerrarSesion}
+                disabled={isLoggingOut}
+              >
                 <View style={styles.iconContainer}>
-                  <Icon name="log-out" size={32} color="#FFFFFF" />
+                  <Icon 
+                    name={isLoggingOut ? "loader" : "log-out"} 
+                    size={32} 
+                    color="#FFFFFF" 
+                  />
                 </View>
-                <Text style={styles.logoutText}>Cerrar Sesión</Text>
+                <Text style={styles.logoutText}>
+                  {isLoggingOut ? 'Cerrando Sesión...' : 'Cerrar Sesión'}
+                </Text>
               </TouchableOpacity>
             </View>
+            
             <View style={styles.infoSection}>
               <Text style={styles.infoText}>Versión 1.0.0</Text>
               <Text style={styles.infoSubtext}>© 2025 Tango Shop</Text>
@@ -227,6 +272,9 @@ const styles = StyleSheet.create({
     elevation: 0,
     borderWidth: 1,
     borderColor: '#1A2F55',
+  },
+  logoutButtonDisabled: {
+    opacity: 0.6,
   },
   logoutText: {
     fontSize: 24,
