@@ -2,6 +2,7 @@
 import FormComponent from '@/src/components/Form';
 import imagePath from '@/src/constants/imagePath';
 import useAxios from '@/src/hooks/useFetch';
+import useStore from '@/src/hooks/useStorage'; // Import correcto
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -47,6 +48,18 @@ const LoginScreen = () => {
       if (response && response.ok) {
         // Guardar datos del usuario en AsyncStorage
         await AsyncStorage.setItem('currentUser', JSON.stringify(response.ok.data));
+        
+        // Guardar token si existe
+        if (response.ok.data.token) {
+          await AsyncStorage.setItem('authToken', response.ok.data.token);
+        }
+        
+        // Guardar en Storage local (Zustand)
+        const { save } = useStore.getState();
+        save({ 
+          currentUser: response.ok.data,
+          authToken: response.ok.data.token || null
+        });
         
         Alert.alert(
           'Login Exitoso',

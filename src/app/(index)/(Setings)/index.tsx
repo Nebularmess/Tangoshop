@@ -1,9 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Header from '../../../components/header';
-import NavBar from '../../../components/navBar';
+import useStore from '../../../hooks/useStorage';
 
 type Screen = 'index' | 'Proveedores' | 'Buscador' | 'Favoritos' | 'Configuracion';
 
@@ -16,17 +17,18 @@ interface SettingOption {
 
 const Index = () => {
   const [activeScreen, setActiveScreen] = useState<Screen>('Configuracion');
+  const { remove: removeFromStorage } = useStore();
 
   const handleEditarCuenta = () => {
-    router.push('/editarPerfil');
+    router.push('/(index)/(Setings)/editarPerfil');
   };
 
   const handleMiCatalogo = () => {
-    router.push('/miCatalogo');
+    router.push('/(index)/(Setings)/miCatalogo');
   };
 
   const handleAsistencia = () => {
-    router.push('/asistencia');
+    router.push('/(index)/(Setings)/asistencia');
   };
 
   const handleCerrarSesion = () => {
@@ -41,8 +43,24 @@ const Index = () => {
         {
           text: 'Cerrar Sesión',
           style: 'destructive',
-          onPress: () => {
-            console.log('Cerrando sesión...');
+          onPress: async () => {
+            try {
+              // Limpiar AsyncStorage
+              await AsyncStorage.removeItem('currentUser');
+              await AsyncStorage.removeItem('authToken');
+              
+              // Limpiar Storage local (Zustand)
+              removeFromStorage('currentUser');
+              removeFromStorage('authToken');
+              
+              console.log('Sesión cerrada exitosamente');
+              
+              // Redirigir al usuario a la pantalla de términos y condiciones
+              router.replace('/(auth)/termsAgree');
+            } catch (error) {
+              console.error('Error al cerrar sesión:', error);
+              Alert.alert('Error', 'No se pudo cerrar la sesión correctamente');
+            }
           },
         },
       ]
@@ -119,7 +137,6 @@ const Index = () => {
       <View style={styles.container}>
         {renderScreen()}
       </View>
-      <NavBar activeScreen={activeScreen} />
     </SafeAreaView>
   );
 };
@@ -180,22 +197,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 17,
   },
-  settingIcon: {
-    fontSize: 32,
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
   settingTitle: {
     fontSize: 24,
     fontWeight: '400',
     color: '#FFFFFF',
     flex: 1,
     fontFamily: 'Segoe UI',
-  },
-  settingArrow: {
-    fontSize: 20,
-    color: '#C0C0C0',
-    fontWeight: '300',
   },
   logoutSection: {
     marginBottom: 30,
@@ -220,10 +227,6 @@ const styles = StyleSheet.create({
     elevation: 0,
     borderWidth: 1,
     borderColor: '#1A2F55',
-  },
-  logoutIcon: {
-    fontSize: 32,
-    color: '#FFFFFF',
   },
   logoutText: {
     fontSize: 24,
