@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   Alert,
   Clipboard,
-  Image,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -12,7 +11,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Header from '../../../components/header';
@@ -76,19 +75,17 @@ const EditarMiCatalogo = () => {
     try {
       setIsLoading(true);
       const currentUser = getCurrentUser();
-      
+
       if (!currentUser?._id) {
         Alert.alert('Error', 'No se encontró información del usuario');
         router.back();
         return;
       }
 
-      // Cargar catálogo existente
       await loadCatalog(currentUser._id);
-      
-      // Cargar productos del usuario
+
       await loadUserProducts(currentUser._id);
-      
+
     } catch (error) {
       console.error('Error loading data:', error);
       Alert.alert('Error', 'No se pudieron cargar los datos');
@@ -128,7 +125,6 @@ const EditarMiCatalogo = () => {
           productosSeleccionados: catalog.productosSeleccionados || [],
         });
       } else {
-        // Crear catálogo por defecto si no existe
         const user = getCurrentUser();
         setCatalogoData(prev => ({
           ...prev,
@@ -197,12 +193,11 @@ const EditarMiCatalogo = () => {
   const handleInputChange = (field: keyof CatalogoData, value: string) => {
     setCatalogoData(prev => {
       const newData = { ...prev, [field]: value };
-      
-      // Auto-generar slug cuando cambia el nombre de la tienda
+
       if (field === 'nombreTienda' && value) {
         newData.slug = generateSlug(value);
       }
-      
+
       return newData;
     });
   };
@@ -238,7 +233,7 @@ const EditarMiCatalogo = () => {
       const newSelected = isSelected
         ? prev.productosSeleccionados.filter(id => id !== productoId)
         : [...prev.productosSeleccionados, productoId];
-      
+
       return {
         ...prev,
         productosSeleccionados: newSelected
@@ -273,16 +268,14 @@ const EditarMiCatalogo = () => {
       };
 
       let response;
-      
+
       if (catalogoData._id) {
-        // Actualizar catálogo existente
         response = await saveCatalog({
           method: 'post',
           url: `/api/updateObject/${catalogoData._id}`,
           data: catalogData
         });
       } else {
-        // Crear nuevo catálogo
         response = await saveCatalog({
           method: 'post',
           url: '/api/createObject',
@@ -347,191 +340,14 @@ const EditarMiCatalogo = () => {
       </Header>
 
       <View style={styles.contentContainer}>
-        <ScrollView 
-          style={styles.scrollContainer} 
+        <ScrollView
+          style={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContentContainer}
         >
-          {/* Sección 1: Formulario de Configuración */}
-          <View style={styles.section}>
-            {/* Imagen de Portada */}
-            <View style={styles.imageSection}>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Imagen de Portada (Opcional)</Text>
-                <TouchableOpacity 
-                  style={styles.imageUpload}
-                  onPress={handleSeleccionarImagen}
-                >
-                  {catalogoData.imagenPortada ? (
-                    <Image 
-                      source={{ uri: catalogoData.imagenPortada }} 
-                      style={styles.uploadedImage}
-                      onError={() => {
-                        Alert.alert('Error', 'No se pudo cargar la imagen. Verifica que la URL sea válida.');
-                        handleInputChange('imagenPortada', '');
-                      }}
-                    />
-                  ) : (
-                    <View style={styles.placeholderImage}>
-                      <Icon name="image" size={32} color="#9CA3AF" />
-                      <Text style={styles.placeholderText}>Toca para agregar URL de imagen</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-                {catalogoData.imagenPortada && (
-                  <TouchableOpacity 
-                    style={styles.removeImageButton} 
-                    onPress={() => handleInputChange('imagenPortada', '')}
-                  >
-                    <Text style={styles.removeImageText}>Quitar imagen</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            {/* Campos de texto */}
-            <View style={styles.inputGroup}>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Título del Catálogo *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Ej: Ferretería de Juan"
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.nombreTienda}
-                  onChangeText={(value) => handleInputChange('nombreTienda', value)}
-                  editable={!savingCatalog}
-                />
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>URL del Catálogo</Text>
-                <View style={styles.urlPreview}>
-                  <Text style={styles.urlPreviewText}>
-                    catalogo.tangoshop.com/{catalogoData.slug || 'usuario'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Descripción (Opcional)</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Describe tu negocio en pocas palabras..."
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.descripcion}
-                  onChangeText={(value) => handleInputChange('descripcion', value)}
-                  multiline={true}
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  editable={!savingCatalog}
-                />
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Número de Contacto *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="+54 9 11 1234-5678"
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.telefono}
-                  onChangeText={(value) => handleInputChange('telefono', value)}
-                  keyboardType="phone-pad"
-                  editable={!savingCatalog}
-                />
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Email *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="contacto@minegocio.com"
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.email}
-                  onChangeText={(value) => handleInputChange('email', value)}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  editable={!savingCatalog}
-                />
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Sitio Web (Opcional)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="www.mipagina.com"
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.sitioWeb}
-                  onChangeText={(value) => handleInputChange('sitioWeb', value)}
-                  keyboardType="url"
-                  autoCapitalize="none"
-                  editable={!savingCatalog}
-                />
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Referencias (Opcional)</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Información adicional, horarios de atención, ubicación, etc..."
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.referencias}
-                  onChangeText={(value) => handleInputChange('referencias', value)}
-                  multiline={true}
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  editable={!savingCatalog}
-                />
-              </View>
-            </View>
-
-            {/* Selección de Productos */}
-            {productos.length > 0 && (
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Mis Productos</Text>
-                <Text style={styles.fieldSubtitle}>
-                  Selecciona los productos que quieres mostrar ({catalogoData.productosSeleccionados.length} seleccionados)
-                </Text>
-                <View style={styles.productsList}>
-                  {productos.map((producto) => (
-                    <TouchableOpacity
-                      key={producto._id}
-                      style={[
-                        styles.productItem,
-                        catalogoData.productosSeleccionados.includes(producto._id) && styles.productItemSelected
-                      ]}
-                      onPress={() => toggleProducto(producto._id)}
-                      disabled={savingCatalog}
-                    >
-                      <View style={styles.productInfo}>
-                        <Text style={styles.productName}>{producto.name}</Text>
-                        <Text style={styles.productPrice}>${producto.price}</Text>
-                      </View>
-                      <Icon 
-                        name={catalogoData.productosSeleccionados.includes(producto._id) ? "check-circle" : "circle"} 
-                        size={20} 
-                        color={catalogoData.productosSeleccionados.includes(producto._id) ? "#133A7D" : "#9CA3AF"} 
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {productos.length === 0 && (
-              <View style={styles.noProductsContainer}>
-                <Icon name="package" size={48} color="#9CA3AF" />
-                <Text style={styles.noProductsText}>Aún no tienes productos</Text>
-                <Text style={styles.noProductsSubtext}>
-                  Agrega productos desde la sección "Mis Productos" para mostrarlos en tu catálogo
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Sección 2: URL del Catálogo */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tu Catálogo Público</Text>
-            
+
             <View style={styles.urlContainer}>
               <View style={styles.urlBox}>
                 <Text style={styles.urlText}>{catalogoUrl}</Text>
@@ -544,19 +360,6 @@ const EditarMiCatalogo = () => {
               </Text>
             </View>
           </View>
-
-          {/* Botón Guardar */}
-          <TouchableOpacity 
-            style={[styles.saveButton, savingCatalog && styles.saveButtonDisabled]} 
-            onPress={handleGuardar}
-            disabled={savingCatalog}
-          >
-            {savingCatalog ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.saveButtonText}>Guardar Catálogo</Text>
-            )}
-          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -573,7 +376,7 @@ const EditarMiCatalogo = () => {
             <Text style={styles.modalSubtitle}>
               Ingresa la URL de la imagen que quieres usar como portada:
             </Text>
-            
+
             <TextInput
               style={styles.modalInput}
               placeholder="https://ejemplo.com/imagen.jpg"

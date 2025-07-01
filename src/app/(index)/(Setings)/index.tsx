@@ -53,128 +53,115 @@ const Index = () => {
   };
 
   const performLogout = async () => {
-  setIsLoggingOut(true);
-  
-  try {
-    console.log('🚪 Iniciando proceso de logout...');
+    setIsLoggingOut(true);
     
-    // Paso 1: Limpiar Zustand Store
-    console.log('🧹 Limpiando Zustand store...');
-    clearStorage();
-    
-    // Paso 2: Limpiar AsyncStorage
-    console.log('🗑️ Limpiando AsyncStorage...');
-    await AsyncStorage.clear();
-    
-    // Paso 3: Limpiar storage web si aplica
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      console.log('🌐 Limpiando web storage...');
-      window.localStorage?.clear();
-      window.sessionStorage?.clear();
-    }
-    
-    console.log('✅ Logout completado, redirigiendo...');
-    
-    // ✅ USAR setTimeout PARA ASEGURAR QUE EL ESTADO SE ACTUALICE
-    setTimeout(() => {
-      try {
-        // Verificar si el router está disponible
-        if (router && typeof router.replace === 'function') {
-          router.replace('/(auth)/termsAgree');
-        } else {
-          console.warn('Router no disponible, usando push');
-          router.push('/(auth)/termsAgree');
-        }
-      } catch (navError) {
-        console.error('Error en navegación:', navError);
-        // Fallback: intentar con push
-        try {
-          router.push('/(auth)/termsAgree');
-        } catch (pushError) {
-          console.error('Error en push fallback:', pushError);
-        }
-      }
-    }, 100); // Pequeño delay para permitir que React actualice el estado
-    
-  } catch (error) {
-    console.error('❌ Error durante el logout:', error);
-    
-    // Estrategia de fallback: intentar limpiar lo que se pueda
     try {
-      console.log('🔄 Intentando fallback de logout...');
+      console.log('🚪 Iniciando proceso de logout...');
+      
+      console.log('🧹 Limpiando Zustand store...');
       clearStorage();
       
-      // Limpiar elementos críticos específicos
-      const criticalKeys = ['currentUser', 'authToken', 'userSession'];
-      for (const key of criticalKeys) {
-        try {
-          await AsyncStorage.removeItem(key);
-        } catch (keyError) {
-          console.warn(`Error removiendo ${key}:`, keyError);
-        }
-      }
+      console.log('🗑️ Limpiando AsyncStorage...');
+      await AsyncStorage.clear();
       
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        try {
-          criticalKeys.forEach(key => {
-            window.localStorage?.removeItem(key);
-          });
-          window.sessionStorage?.clear();
-        } catch (webError) {
-          console.warn('⚠️ Error limpiando web storage:', webError);
-        }
+        console.log('🌐 Limpiando web storage...');
+        window.localStorage?.clear();
+        window.sessionStorage?.clear();
       }
       
-      // Navegar con delay incluso si hubo errores
+      console.log('Logout completado, redirigiendo...');
+      
       setTimeout(() => {
         try {
-          router.replace('/(auth)/termsAgree');
+          if (router && typeof router.replace === 'function') {
+            router.replace('/(auth)/termsAgree');
+          } else {
+            console.warn('Router no disponible, usando push');
+            router.push('/(auth)/termsAgree');
+          }
         } catch (navError) {
-          console.error('Error en navegación de fallback:', navError);
-          // Último recurso
-          router.push('/(auth)/termsAgree');
+          console.error('Error en navegación:', navError);
+          try {
+            router.push('/(auth)/termsAgree');
+          } catch (pushError) {
+            console.error('Error en push fallback:', pushError);
+          }
         }
-      }, 200);
+      }, 100); 
       
-    } catch (fallbackError) {
-      console.error('❌ Error en fallback de logout:', fallbackError);
+    } catch (error) {
+      console.error('Error durante el logout:', error);
       
-      // Último recurso: solo navegar con delay
+      try {
+        console.log('Intentando fallback de logout...');
+        clearStorage();
+        
+        const criticalKeys = ['currentUser', 'authToken', 'userSession'];
+        for (const key of criticalKeys) {
+          try {
+            await AsyncStorage.removeItem(key);
+          } catch (keyError) {
+            console.warn(`Error removiendo ${key}:`, keyError);
+          }
+        }
+        
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          try {
+            criticalKeys.forEach(key => {
+              window.localStorage?.removeItem(key);
+            });
+            window.sessionStorage?.clear();
+          } catch (webError) {
+            console.warn('Error limpiando web storage:', webError);
+          }
+        }
+        
+        setTimeout(() => {
+          try {
+            router.replace('/(auth)/termsAgree');
+          } catch (navError) {
+            console.error('Error en navegación de fallback:', navError);
+            router.push('/(auth)/termsAgree');
+          }
+        }, 200);
+        
+      } catch (fallbackError) {
+        console.error('Error en fallback de logout:', fallbackError);
+        
+        setTimeout(() => {
+          try {
+            router.replace('/(auth)/termsAgree');
+          } catch (finalError) {
+            console.error('Error final en navegación:', finalError);
+            setIsLoggingOut(false);
+          }
+        }, 300);
+      }
+    } finally {
       setTimeout(() => {
-        try {
-          router.replace('/(auth)/termsAgree');
-        } catch (finalError) {
-          console.error('Error final en navegación:', finalError);
-          // Si todo falla, al menos forzar la limpieza del estado local
-          setIsLoggingOut(false);
-        }
-      }, 300);
+        setIsLoggingOut(false);
+      }, 1000);
     }
-  } finally {
-    // Asegurar que el loading se quite después de un tiempo razonable
-    setTimeout(() => {
-      setIsLoggingOut(false);
-    }, 1000);
-  }
-};
-  
+  };
+    
   const settingsOptions: SettingOption[] = [
     {
       id: 'editarCuenta',
       title: 'Editar Cuenta',
-      icon: <Icon name="user" size={32} color="#FFFFFF" />,
+      icon: <Icon name="user" size={24} color="#666" />,
       onPress: handleEditarCuenta,
     },
     {
       id: 'miCatalogo',
       title: 'Mi Catálogo',
-      icon: <Icon name="list" size={32} color="#FFFFFF" />,
+      icon: <Icon name="list" size={24} color="#666" />,
       onPress: handleMiCatalogo,
     },
     {
       id: 'asistencia',
       title: 'Asistencia',
-      icon: <Icon name="help-circle" size={32} color="#FFFFFF" />,
+      icon: <Icon name="help-circle" size={24} color="#666" />,
       onPress: handleAsistencia,
     },
   ];
@@ -190,6 +177,7 @@ const Index = () => {
           {option.icon}
         </View>
         <Text style={styles.settingTitle}>{option.title}</Text>
+        <Icon name="chevron-right" size={20} color="#999" />
       </View>
     </TouchableOpacity>
   );
@@ -219,16 +207,18 @@ const Index = () => {
                 onPress={handleCerrarSesion}
                 disabled={isLoggingOut}
               >
-                <View style={styles.iconContainer}>
-                  <Icon 
-                    name={isLoggingOut ? "loader" : "log-out"} 
-                    size={32} 
-                    color="#FFFFFF" 
-                  />
+                <View style={styles.logoutContent}>
+                  <View style={styles.logoutIconContainer}>
+                    <Icon 
+                      name={isLoggingOut ? "loader" : "log-out"} 
+                      size={24} 
+                      color="#dc3545" 
+                    />
+                  </View>
+                  <Text style={styles.logoutText}>
+                    {isLoggingOut ? 'Cerrando Sesión...' : 'Cerrar Sesión'}
+                  </Text>
                 </View>
-                <Text style={styles.logoutText}>
-                  {isLoggingOut ? 'Cerrando Sesión...' : 'Cerrar Sesión'}
-                </Text>
               </TouchableOpacity>
             </View>
             
@@ -254,115 +244,129 @@ const Index = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0A1F44',
+    backgroundColor: '#F5F5F5',
   },
   container: {
     flex: 1,
-    backgroundColor: '#0A1F44',
+    backgroundColor: '#F5F5F5',
   },
   scrollContainer: {
     flex: 1,
-    backgroundColor: '#0A1F44',
+    backgroundColor: '#F5F5F5',
   },
   settingsContainer: {
     flex: 1,
-    backgroundColor: '#0A1F44',
-    padding: 0,
+    backgroundColor: '#F5F5F5',
+    padding: 16,
     paddingBottom: 40,
   },
   settingsSection: {
-    backgroundColor: '#0A1F44',
-    borderRadius: 0,
-    shadowColor: 'transparent',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 0,
+      height: 2,
     },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F8F9FA',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
   },
   settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    height: 82.16,
-    backgroundColor: '#0A1F44',
-    borderWidth: 1,
-    borderColor: '#1A2F55',
-    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#1A2F55',
-    marginBottom: 0,
+    borderBottomColor: '#F0F0F0',
   },
   settingItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    minHeight: 60,
   },
   iconContainer: {
-    width: 60,
-    height: 60,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 17,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 20,
+    marginRight: 16,
   },
   settingTitle: {
-    fontSize: 24,
-    fontWeight: '400',
-    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
     flex: 1,
-    fontFamily: 'Segoe UI',
   },
   logoutSection: {
-    marginBottom: 30,
-    paddingHorizontal: 0,
-    backgroundColor: '#0A1F44',
-  },
-  logoutButton: {
-    backgroundColor: '#0A1F44',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    height: 82.16,
-    paddingHorizontal: 20,
-    borderRadius: 0,
-    shadowColor: 'transparent',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 0,
+      height: 2,
     },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-    borderWidth: 1,
-    borderColor: '#1A2F55',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  logoutButton: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    minHeight: 60,
   },
   logoutButtonDisabled: {
     opacity: 0.6,
   },
+  logoutContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoutIconContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F5',
+    borderRadius: 20,
+    marginRight: 16,
+  },
   logoutText: {
-    fontSize: 24,
-    fontWeight: '400',
-    color: '#FFFFFF',
-    fontFamily: 'Segoe UI',
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#dc3545',
+    flex: 1,
   },
   infoSection: {
     alignItems: 'center',
     marginTop: 20,
     paddingHorizontal: 20,
-    backgroundColor: '#0A1F44',
+    backgroundColor: 'transparent',
   },
   infoText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#666',
     marginBottom: 4,
-    opacity: 0.7,
   },
   infoSubtext: {
     fontSize: 12,
-    color: '#FFFFFF',
-    opacity: 0.5,
+    color: '#999',
   },
 });
 
