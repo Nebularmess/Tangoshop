@@ -1,3 +1,4 @@
+// src/app/(index)/(home)/components/ProductCard.tsx
 import useFetch from '@/src/hooks/useFetch';
 import useStore from '@/src/hooks/useStorage';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
@@ -34,8 +35,12 @@ const ProductCard: React.FC<{ product: ProductCardProps['product'] }> = ({ produ
     const currentUser = get().currentUser;
     const { execute, error } = useFetch<ResApi>();
 
-    const [isSaved, setIsSaved] = useState((product.saved_product || []).length > 0);
-    const [savedId, setSavedId] = useState(product.saved_product?.[0]?._id || '');
+    const [isSaved, setIsSaved] = useState((product?.saved_product || []).length > 0);
+    const [savedId, setSavedId] = useState(product?.saved_product?.[0]?._id || '');
+
+    if (!product || !currentUser) {
+        return null;
+    }
 
     const relation = {
         type: "saved_product",
@@ -49,6 +54,11 @@ const ProductCard: React.FC<{ product: ProductCardProps['product'] }> = ({ produ
     };
 
     const handleToggleFavorite = async () => {
+        if (!currentUser?._id) {
+            console.log("No hay usuario logueado");
+            return;
+        }
+
         if (!isSaved) {
             const result = await execute({
                 method: 'post',
@@ -77,16 +87,19 @@ const ProductCard: React.FC<{ product: ProductCardProps['product'] }> = ({ produ
     };
 
     const navigateTo = () => {
-        router.push(`/(index)/(Products)/${product._id}`); //products/
+        router.push(`/(index)/(Products)/${product._id}`);
     };
+
+    const productImage = product.props?.images?.[0] || null;
+    const productPrice = product.props?.price || 0;
 
     return (
         <TouchableOpacity className="flex-row bg-white rounded-xl p-2 m-2 shadow-lg" onPress={navigateTo}>
             {/* Imagen */}
             <Image
                 source={
-                    product.props?.images?.[0]
-                        ? { uri: product.props.images[0] }
+                    productImage
+                        ? { uri: productImage }
                         : require('@/src/assets/images/loaderProduct.png')
                 }
                 className="w-28 h-28 rounded-lg"
@@ -96,17 +109,17 @@ const ProductCard: React.FC<{ product: ProductCardProps['product'] }> = ({ produ
             {/* Info */}
             <View className="flex-1 pl-3 justify-between">
                 <View>
-                    <Text className="text-gray-500 text-sm">{product.categorie}</Text>
+                    <Text className="text-gray-500 text-sm">{product.categorie || 'Sin categoría'}</Text>
                     <Text className="text-black text-lg font-semibold" numberOfLines={1}>
-                        {product.name}
+                        {product.name || 'Producto sin nombre'}
                     </Text>
                     <Text className="text-gray-700 text-sm" numberOfLines={2}>
-                        {product.description}
+                        {product.description || 'Sin descripción'}
                     </Text>
                 </View>
 
                 <Text className="text-black text-lg font-bold mt-1">
-                    ${product.props.price.toLocaleString("es-AR")}
+                    ${productPrice.toLocaleString("es-AR")}
                 </Text>
             </View>
 
@@ -123,4 +136,3 @@ const ProductCard: React.FC<{ product: ProductCardProps['product'] }> = ({ produ
 };
 
 export default ProductCard;
-
