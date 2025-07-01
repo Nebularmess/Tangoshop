@@ -148,7 +148,7 @@ const Index = () => {
   const settingsOptions: SettingOption[] = [
     {
       id: 'editarCuenta',
-      title: 'Editar Cuenta',
+      title: 'Editar Perfil',
       icon: <Icon name="user" size={24} color="#666" />,
       onPress: handleEditarCuenta,
     },

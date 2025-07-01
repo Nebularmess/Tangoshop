@@ -1,13 +1,13 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Header from '../../../components/header';
@@ -41,40 +41,40 @@ const Feedback = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Header
-        title="Feedback"
-        subtitle=""
-      >
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <View style={styles.backButtonCircle}>
-            <Icon name="arrow-left" size={20} color="#FFFFFF" />
-          </View>
-        </TouchableOpacity>
-      </Header>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Header
+          title="Feedback"
+          subtitle="Comparte tu opinión con nosotros"
+        >
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Icon name="arrow-left" size={24} color="#007AFF" />
+          </TouchableOpacity>
+        </Header>
 
-      <View style={styles.contentContainer}>
-        <View style={styles.formContainer}>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Escribe tus recomendaciones"
-              placeholderTextColor="#9CA3AF"
-              value={recomendaciones}
-              onChangeText={setRecomendaciones}
-              multiline={true}
-              textAlignVertical="top"
-            />
-          </View>
+        <View style={styles.contentContainer}>
+          <View style={styles.formContainer}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Escribe tus recomendaciones aquí..."
+                placeholderTextColor="#8E8E93"
+                value={recomendaciones}
+                onChangeText={setRecomendaciones}
+                multiline={true}
+                textAlignVertical="top"
+              />
+            </View>
 
-          <View style={styles.bottomSection}>
-            <Text style={styles.helpText}>
-              Tus comentarios nos ayudan a mejorar!
-            </Text>
-            
-            <TouchableOpacity style={styles.enviarButton} onPress={handleEnviar}>
-              <Text style={styles.enviarButtonText}>Enviar</Text>
-            </TouchableOpacity>
+            <View style={styles.bottomSection}>
+              <Text style={styles.helpText}>
+                Tus comentarios nos ayudan a mejorar
+              </Text>
+              
+              <TouchableOpacity style={styles.enviarButton} onPress={handleEnviar}>
+                <Text style={styles.enviarButtonText}>Enviar Feedback</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -83,44 +83,38 @@ const Feedback = () => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#0A1F44',
+    backgroundColor: '#F5F5F5',
   },
   backButton: {
     position: 'absolute',
     left: 0,
     top: 0,
     zIndex: 10,
-  },
-  backButtonCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    padding: 8,
   },
   contentContainer: {
     flex: 1,
-    backgroundColor: '#0A1F44',
-    padding: 20,
+    padding: 10,
   },
   formContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 3,
+    elevation: 2,
   },
   inputContainer: {
     flex: 1,
@@ -128,14 +122,11 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    fontFamily: 'Inter',
-    color: '#374151',
+    color: '#1C1C1E',
     textAlignVertical: 'top',
   },
   bottomSection: {
@@ -143,24 +134,22 @@ const styles = StyleSheet.create({
   },
   helpText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#8E8E93',
     textAlign: 'center',
     marginBottom: 20,
-    fontFamily: 'Inter',
   },
   enviarButton: {
-    backgroundColor: '#133A7D',
-    paddingHorizontal: 40,
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 32,
     paddingVertical: 12,
-    borderRadius: 12,
-    minWidth: 120,
+    borderRadius: 8,
+    minWidth: 140,
   },
   enviarButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
-    fontFamily: 'Inter',
   },
 });
 

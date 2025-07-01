@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Header from '../../../components/header';
@@ -73,7 +73,7 @@ const FAQ = () => {
           <Icon 
             name={isExpanded ? "chevron-up" : "chevron-down"} 
             size={20} 
-            color="#374151" 
+            color="#8E8E93" 
           />
         </TouchableOpacity>
         
@@ -87,19 +87,17 @@ const FAQ = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Header
-        title="Preguntas Frecuentes"
-        subtitle=""
-      >
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <View style={styles.backButtonCircle}>
-            <Icon name="arrow-left" size={20} color="#FFFFFF" />
-          </View>
-        </TouchableOpacity>
-      </Header>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Header
+          title="Preguntas Frecuentes"
+          subtitle="Encuentra respuestas a tus dudas"
+        >
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Icon name="arrow-left" size={24} color="#007AFF" />
+          </TouchableOpacity>
+        </Header>
 
-      <View style={styles.contentContainer}>
         <ScrollView 
           style={styles.scrollContainer} 
           showsVerticalScrollIndicator={false}
@@ -117,79 +115,68 @@ const FAQ = () => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#0A1F44',
+    backgroundColor: '#F5F5F5',
   },
   backButton: {
     position: 'absolute',
     left: 0,
     top: 0,
     zIndex: 10,
-  },
-  backButtonCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  contentContainer: {
-    flex: 1,
-    backgroundColor: '#0A1F44',
+    padding: 8,
   },
   scrollContainer: {
     flex: 1,
   },
   scrollContentContainer: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 10,
+    paddingBottom: 20,
   },
   faqContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 12,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 3,
+    elevation: 2,
   },
   faqItem: {
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#F2F2F7',
   },
   faqHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
     backgroundColor: '#FFFFFF',
   },
   questionText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: '#1C1C1E',
     flex: 1,
     marginRight: 12,
-    fontFamily: 'Inter',
   },
   answerContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#F9F9F9',
   },
   answerText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#8E8E93',
     lineHeight: 20,
-    fontFamily: 'Inter',
   },
 });
 

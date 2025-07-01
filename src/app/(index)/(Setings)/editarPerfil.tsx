@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -25,8 +24,6 @@ interface FormData {
   apellido: string;
   telefono: string;
   password: string;
-  nuevaPassword: string;
-  repetirNuevaPassword: string;
   fechaNacimiento: string;
 }
 
@@ -47,7 +44,6 @@ interface UserApiResponse {
   error?: any;
   items?: UserData[];
   item?: UserData;
-  // Para respuesta directa
   _id?: string;
   name?: string;
   last_name?: string;
@@ -69,8 +65,6 @@ const EditProfile = () => {
     apellido: '',
     telefono: '',
     password: '',
-    nuevaPassword: '',
-    repetirNuevaPassword: '',
     fechaNacimiento: '',
   });
 
@@ -84,7 +78,6 @@ const EditProfile = () => {
   const [profileImage, setProfileImage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Cargar datos del usuario al montar el componente
   useEffect(() => {
     loadUserData();
   }, []);
@@ -93,11 +86,9 @@ const EditProfile = () => {
     try {
       setIsLoading(true);
 
-      // Primero intentar obtener del storage local (Zustand)
       const storageUser = getCurrentUser();
       let userData = storageUser;
 
-      // Si no está en el storage, obtener de AsyncStorage
       if (!userData) {
         const storedUser = await AsyncStorage.getItem('currentUser');
         if (!storedUser) {
@@ -116,11 +107,9 @@ const EditProfile = () => {
         return;
       }
 
-      // Intentar múltiples estrategias para encontrar el usuario
       let response = null;
 
       try {
-        // Estrategia 1: Query simple por _id sin restricciones de tipo
         const simpleQuery = [
           {
             "$match": {
@@ -145,7 +134,6 @@ const EditProfile = () => {
 
       } catch (error1) {
         try {
-          // Estrategia 2: Query con filtro de email
           const emailQuery = [
             {
               "$match": {
@@ -168,7 +156,6 @@ const EditProfile = () => {
 
         } catch (error2) {
           try {
-            // Estrategia 3: Intentar con endpoint directo de usuario
             response = await fetchUser({
               method: 'get',
               url: `/api/user/${userId}`,
@@ -181,43 +168,34 @@ const EditProfile = () => {
             }
 
           } catch (error3) {
-            // Estrategia 4: Usar datos del storage como fallback
             response = { items: [userData] };
           }
         }
       }
 
-      // Procesar la respuesta según el formato
       let user = null;
 
       if (response._id) {
-        // Respuesta directa (Estrategia 3)
         user = response as UserData;
       } else if (response.items && response.items.length > 0) {
-        // Respuesta con array (Estrategias 1, 2, 4)
         user = response.items[0];
       } else if (response.item) {
-        // Respuesta con objeto item
         user = response.item;
       }
 
       if (user && (user._id || user.email)) {
         setCurrentUser(user);
 
-        // Llenar el formulario con los datos actuales
         setFormData({
           nombre: user.name || '',
           apellido: user.last_name || '',
           telefono: user.phone || '',
           password: '',
-          nuevaPassword: '',
-          repetirNuevaPassword: '',
           fechaNacimiento: user.birthDate || '',
         });
 
         setProfileImage(user.image || '');
 
-        // Actualizar el storage local con datos frescos
         saveToStorage({ currentUser: user });
         await AsyncStorage.setItem('currentUser', JSON.stringify(user));
 
@@ -229,7 +207,6 @@ const EditProfile = () => {
             {
               text: 'OK',
               onPress: () => {
-                // Usar datos del storage como último recurso
                 if (userData) {
                   setCurrentUser(userData);
                   setFormData({
@@ -237,8 +214,6 @@ const EditProfile = () => {
                     apellido: userData.last_name || '',
                     telefono: userData.phone || '',
                     password: '',
-                    nuevaPassword: '',
-                    repetirNuevaPassword: '',
                     fechaNacimiento: userData.birthDate || '',
                   });
                   setProfileImage(userData.image || '');
@@ -323,7 +298,6 @@ const EditProfile = () => {
   };
 
   const openDatePicker = () => {
-    // Si ya hay una fecha, pre-llenar los campos
     if (formData.fechaNacimiento) {
       try {
         const date = new Date(formData.fechaNacimiento);
@@ -350,22 +324,6 @@ const EditProfile = () => {
       return;
     }
 
-    // Validaciones
-    if (formData.nuevaPassword) {
-      if (formData.nuevaPassword !== formData.repetirNuevaPassword) {
-        Alert.alert('Error', 'Las contraseñas nuevas no coinciden');
-        return;
-      }
-      if (!formData.password) {
-        Alert.alert('Error', 'Debes ingresar tu contraseña actual para cambiarla');
-        return;
-      }
-      if (formData.nuevaPassword.length < 6) {
-        Alert.alert('Error', 'La nueva contraseña debe tener al menos 6 caracteres');
-        return;
-      }
-    }
-
     Alert.alert(
       'Guardar Cambios',
       '¿Estás seguro de que quieres guardar los cambios?',
@@ -378,9 +336,8 @@ const EditProfile = () => {
           text: 'Guardar',
           onPress: async () => {
             try {
-              console.log('💾 Guardando cambios del usuario...');
+              console.log('Guardando cambios del usuario...');
 
-              // Preparar datos para actualizar (solo las propiedades que cambiaron)
               const updateData: any = {};
 
               if (formData.nombre !== currentUser.name) updateData.name = formData.nombre.trim();
@@ -389,19 +346,11 @@ const EditProfile = () => {
               if (formData.fechaNacimiento !== currentUser.birthDate) updateData.birthDate = formData.fechaNacimiento;
               if (profileImage !== currentUser.image) updateData.image = profileImage;
 
-              // Si hay cambios en la contraseña, agregarla
-              if (formData.nuevaPassword && formData.password) {
-                updateData.currentPassword = formData.password;
-                updateData.newPassword = formData.nuevaPassword;
-              }
-
-              // Si no hay cambios, no hacer nada
               if (Object.keys(updateData).length === 0) {
                 Alert.alert('Sin cambios', 'No se detectaron cambios para guardar');
                 return;
               }
 
-              // Intentar actualizar usando diferentes endpoints
               let response = null;
 
               try {
@@ -440,7 +389,6 @@ const EditProfile = () => {
                     }
 
                   } catch (updateError3) {
-                    // Actualización local como último recurso
                     const mergedUserData = {
                       ...currentUser,
                       ...updateData,
@@ -457,7 +405,6 @@ const EditProfile = () => {
                 }
               }
 
-              // Validación mejorada de respuesta exitosa
               const isSuccessfulUpdate = response && (
                 (response as any).item ||
                 (response as any).items ||
@@ -469,9 +416,8 @@ const EditProfile = () => {
               );
 
               if (isSuccessfulUpdate) {
-                // Obtener datos actualizados según el formato de respuesta
                 let updatedUserData = null;
-                const responseAny = response as any; // Type assertion una sola vez
+                const responseAny = response as any;
 
                 if (responseAny.item) {
                   updatedUserData = responseAny.item;
@@ -482,7 +428,6 @@ const EditProfile = () => {
                 } else if (responseAny.data && responseAny.data._id) {
                   updatedUserData = responseAny.data;
                 } else {
-                  // Fallback: merge manual de datos
                   updatedUserData = {
                     ...currentUser,
                     ...updateData,
@@ -491,30 +436,23 @@ const EditProfile = () => {
                   };
                 }
 
-                // Actualizar datos en AsyncStorage y Storage local
                 const finalUserData = {
                   ...currentUser,
                   ...updateData,
-                  // No incluir las contraseñas en el storage
                   currentPassword: undefined,
                   newPassword: undefined,
-                  // Mantener datos importantes del usuario original
                   _id: currentUser._id,
                   email: currentUser.email,
-                  // Aplicar actualizaciones
                   ...(updatedUserData && updatedUserData._id ? updatedUserData : {})
                 };
 
-                // Actualizar AsyncStorage
                 await AsyncStorage.setItem('currentUser', JSON.stringify(finalUserData));
 
-                // Actualizar Storage local (Zustand)
                 saveToStorage({ currentUser: finalUserData });
                 setCurrentUser(finalUserData);
 
                 Alert.alert('Éxito', 'Los cambios se han guardado correctamente');
 
-                // Limpiar campos de contraseña
                 setFormData(prev => ({
                   ...prev,
                   password: '',
@@ -525,7 +463,6 @@ const EditProfile = () => {
                 router.back();
 
               } else {
-                // Actualización local como último recurso
                 Alert.alert(
                   'Actualización Local',
                   'No se pudo confirmar la actualización en el servidor, pero se guardarán los cambios localmente. ¿Continuar?',
@@ -556,9 +493,8 @@ const EditProfile = () => {
                 );
               }
             } catch (error: any) {
-              console.error('❌ Error saving changes:', error);
+              console.error('Error saving changes:', error);
 
-              // Manejo mejorado de errores
               let errorMessage = 'Ocurrió un error al guardar los cambios';
 
               if (error.response?.data?.message) {
@@ -589,14 +525,16 @@ const EditProfile = () => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Header
-          title="Editar cuenta"
-          subtitle="Gestiona tu cuenta y preferencias"
-        />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
-          <Text style={styles.loadingText}>Cargando datos...</Text>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <Header
+            title="Editar Perfil"
+            subtitle="Gestiona tu cuenta y preferencias"
+          />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Cargando datos...</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -604,16 +542,18 @@ const EditProfile = () => {
 
   if (!currentUser) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Header
-          title="Editar cuenta"
-          subtitle="Gestiona tu cuenta y preferencias"
-        />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>No se pudieron cargar los datos del usuario</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadUserData}>
-            <Text style={styles.retryButtonText}>Reintentar</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <Header
+            title="Editar Perfil"
+            subtitle="Gestiona tu cuenta y preferencias"
+          />
+          <View style={styles.loadingContainer}>
+            <Text style={styles.errorText}>No se pudieron cargar los datos del usuario</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={loadUserData}>
+              <Text style={styles.retryButtonText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -628,19 +568,17 @@ const EditProfile = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Header
-        title="Editar cuenta"
-        subtitle="Gestiona tu cuenta y preferencias"
-      >
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <View style={styles.backButtonCircle}>
-            <Icon name="arrow-left" size={20} color="#FFFFFF" />
-          </View>
-        </TouchableOpacity>
-      </Header>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Header
+          title="Editar Perfil"
+          subtitle="Gestiona tu cuenta y preferencias"
+        >
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Icon name="arrow-left" size={24} color="#007AFF" />
+          </TouchableOpacity>
+        </Header>
 
-      <View style={styles.contentContainer}>
         <ScrollView
           style={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
@@ -650,10 +588,7 @@ const EditProfile = () => {
           {/* Sección de Información Personal */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <Text style={styles.sectionTitle}>Información Personal</Text>
-                <View style={styles.sectionDivider} />
-              </View>
+              <Text style={styles.sectionTitle}>Información Personal</Text>
 
               {/* Foto de perfil */}
               <TouchableOpacity style={styles.profileImageContainer} onPress={handleEditPhoto}>
@@ -661,13 +596,13 @@ const EditProfile = () => {
                   <Image
                     source={{
                       uri: profileImage ||
-                        `https://via.placeholder.com/100x100/FF6B35/FFFFFF?text=${formData.nombre.charAt(0) || 'U'}`
+                        `https://via.placeholder.com/80x80/007AFF/FFFFFF?text=${formData.nombre.charAt(0) || 'U'}`
                     }}
                     style={styles.profileImageInner}
                   />
                 </View>
                 <TouchableOpacity style={styles.editPhotoButton} onPress={handleEditPhoto}>
-                  <Icon name="camera" size={14} color="#0A1F44" />
+                  <Icon name="camera" size={12} color="#007AFF" />
                 </TouchableOpacity>
               </TouchableOpacity>
             </View>
@@ -677,7 +612,7 @@ const EditProfile = () => {
                 <TextInput
                   style={[styles.input, styles.nameInput]}
                   placeholder="Nombre"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor="#8E8E93"
                   value={formData.nombre}
                   onChangeText={(value) => handleInputChange('nombre', value)}
                   editable={!updatingUser}
@@ -687,7 +622,7 @@ const EditProfile = () => {
               <TextInput
                 style={styles.input}
                 placeholder="Apellido"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor="#8E8E93"
                 value={formData.apellido}
                 onChangeText={(value) => handleInputChange('apellido', value)}
                 editable={!updatingUser}
@@ -696,7 +631,7 @@ const EditProfile = () => {
               <TextInput
                 style={styles.input}
                 placeholder="Teléfono"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor="#8E8E93"
                 value={formData.telefono}
                 onChangeText={(value) => handleInputChange('telefono', value)}
                 keyboardType="phone-pad"
@@ -718,7 +653,7 @@ const EditProfile = () => {
                 disabled={updatingUser}
               >
                 <View style={styles.dateInputContainer}>
-                  <Icon name="calendar" size={20} color="#9CA3AF" style={styles.dateIcon} />
+                  <Icon name="calendar" size={20} color="#8E8E93" style={styles.dateIcon} />
                   <Text style={[
                     styles.dateInputText,
                     !formData.fechaNacimiento && styles.dateInputPlaceholder
@@ -728,55 +663,13 @@ const EditProfile = () => {
                       : 'Fecha de nacimiento'
                     }
                   </Text>
-                  <Icon name="chevron-down" size={20} color="#9CA3AF" />
+                  <Icon name="chevron-down" size={20} color="#8E8E93" />
                 </View>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Sección de Seguridad */}
-          <View style={styles.section}>
-            <View style={styles.sectionTitleContainer}>
-              <Text style={styles.sectionTitle}>Cambiar Clave</Text>
-              <View style={styles.sectionDivider} />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.input}
-                placeholder="Clave actual"
-                placeholderTextColor="#9CA3AF"
-                value={formData.password}
-                onChangeText={(value) => handleInputChange('password', value)}
-                secureTextEntry
-                editable={!updatingUser}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Nueva clave"
-                placeholderTextColor="#9CA3AF"
-                value={formData.nuevaPassword}
-                onChangeText={(value) => handleInputChange('nuevaPassword', value)}
-                secureTextEntry
-                editable={!updatingUser}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Repetir nueva clave"
-                placeholderTextColor="#9CA3AF"
-                value={formData.repetirNuevaPassword}
-                onChangeText={(value) => handleInputChange('repetirNuevaPassword', value)}
-                secureTextEntry
-                editable={!updatingUser}
-              />
-            </View>
-          </View>
-        </ScrollView>
-
-        {/* Botón Guardar */}
-        <View style={styles.buttonContainer}>
+          {/* Botón Guardar */}
           <TouchableOpacity
             style={[
               styles.saveButton,
@@ -788,88 +681,92 @@ const EditProfile = () => {
             {updatingUser ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveButtonText}>Guardar</Text>
+              <Text style={styles.saveButtonText}>Guardar Cambios</Text>
             )}
           </TouchableOpacity>
-        </View>
-      </View>
+        </ScrollView>
 
-      {/* Modal para seleccionar fecha */}
-      <Modal
-        visible={showDateModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={closeDateModal}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Fecha de Nacimiento</Text>
-              <TouchableOpacity onPress={closeDateModal} style={styles.closeButton}>
-                <Icon name="x" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.dateInputsContainer}>
-              <View style={styles.dateInputWrapper}>
-                <Text style={styles.dateLabel}>Día</Text>
-                <TextInput
-                  style={styles.dateInput}
-                  placeholder="01"
-                  placeholderTextColor="#9CA3AF"
-                  value={tempDate.day}
-                  onChangeText={(value) => setTempDate(prev => ({ ...prev, day: value }))}
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
+        {/* Modal para seleccionar fecha */}
+        <Modal
+          visible={showDateModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={closeDateModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Fecha de Nacimiento</Text>
+                <TouchableOpacity onPress={closeDateModal} style={styles.closeButton}>
+                  <Icon name="x" size={24} color="#8E8E93" />
+                </TouchableOpacity>
               </View>
 
-              <View style={styles.dateInputWrapper}>
-                <Text style={styles.dateLabel}>Mes</Text>
-                <TextInput
-                  style={styles.dateInput}
-                  placeholder="01"
-                  placeholderTextColor="#9CA3AF"
-                  value={tempDate.month}
-                  onChangeText={(value) => setTempDate(prev => ({ ...prev, month: value }))}
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
+              <View style={styles.dateInputsContainer}>
+                <View style={styles.dateInputWrapper}>
+                  <Text style={styles.dateLabel}>Día</Text>
+                  <TextInput
+                    style={styles.dateInput}
+                    placeholder="01"
+                    placeholderTextColor="#8E8E93"
+                    value={tempDate.day}
+                    onChangeText={(value) => setTempDate(prev => ({ ...prev, day: value }))}
+                    keyboardType="numeric"
+                    maxLength={2}
+                  />
+                </View>
+
+                <View style={styles.dateInputWrapper}>
+                  <Text style={styles.dateLabel}>Mes</Text>
+                  <TextInput
+                    style={styles.dateInput}
+                    placeholder="01"
+                    placeholderTextColor="#8E8E93"
+                    value={tempDate.month}
+                    onChangeText={(value) => setTempDate(prev => ({ ...prev, month: value }))}
+                    keyboardType="numeric"
+                    maxLength={2}
+                  />
+                </View>
+
+                <View style={styles.dateInputWrapper}>
+                  <Text style={styles.dateLabel}>Año</Text>
+                  <TextInput
+                    style={[styles.dateInput, styles.yearInput]}
+                    placeholder="1995"
+                    placeholderTextColor="#8E8E93"
+                    value={tempDate.year}
+                    onChangeText={(value) => setTempDate(prev => ({ ...prev, year: value }))}
+                    keyboardType="numeric"
+                    maxLength={4}
+                  />
+                </View>
               </View>
 
-              <View style={styles.dateInputWrapper}>
-                <Text style={styles.dateLabel}>Año</Text>
-                <TextInput
-                  style={[styles.dateInput, styles.yearInput]}
-                  placeholder="1995"
-                  placeholderTextColor="#9CA3AF"
-                  value={tempDate.year}
-                  onChangeText={(value) => setTempDate(prev => ({ ...prev, year: value }))}
-                  keyboardType="numeric"
-                  maxLength={4}
-                />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={styles.cancelButton} onPress={closeDateModal}>
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.confirmButton} onPress={validateAndSetDate}>
+                  <Text style={styles.confirmButtonText}>Confirmar</Text>
+                </TouchableOpacity>
               </View>
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.cancelButton} onPress={closeDateModal}>
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmButton} onPress={validateAndSetDate}>
-                <Text style={styles.confirmButtonText}>Confirmar</Text>
-              </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#0A1F44',
+    backgroundColor: '#F5F5F5',
   },
   loadingContainer: {
     flex: 1,
@@ -880,24 +777,16 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#FFFFFF',
-    fontFamily: 'Inter',
-  },
-  debugText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#FFA500',
-    textAlign: 'center',
-    fontStyle: 'italic',
+    color: '#1C1C1E',
   },
   errorText: {
     fontSize: 16,
-    color: '#FF6B6B',
+    color: '#FF3B30',
     textAlign: 'center',
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#133A7D',
+    backgroundColor: '#007AFF',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -913,99 +802,52 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     zIndex: 10,
-  },
-  backButtonCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  contentContainer: {
-    flex: 1,
-    backgroundColor: '#0A1F44',
+    padding: 8,
   },
   scrollContainer: {
     flex: 1,
   },
   scrollContentContainer: {
-    padding: 20,
-    paddingBottom: 100,
+    padding: 10,
+    paddingBottom: 20,
   },
   section: {
     backgroundColor: '#FFFFFF',
-    marginBottom: 20,
-    borderRadius: 16,
-    padding: 20,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 3,
+    elevation: 2,
   },
   sectionHeader: {
     position: 'relative',
-    marginBottom: 20,
-  },
-  sectionTitleContainer: {
-    flex: 1,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 8,
-    fontFamily: 'Inter',
-  },
-  sectionDivider: {
-    height: 2,
-    backgroundColor: '#E5E7EB',
-    width: '60%',
+    color: '#1C1C1E',
+    marginBottom: 4,
   },
   profileImageContainer: {
     position: 'absolute',
-    top: -40,
+    top: -8,
     right: 0,
     zIndex: 5,
   },
   profileImage: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 3,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 2,
     borderColor: '#FFFFFF',
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  profileImageInner: {
-    width: '100%',
-    height: '100%',
-  },
-  editPhotoButton: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 28,
-    height: 28,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1015,58 +857,74 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  profileImageInner: {
+    width: '100%',
+    height: '100%',
+  },
+  editPhotoButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   inputGroup: {
-    gap: 16,
+    gap: 12,
   },
   inputRow: {
     flexDirection: 'row',
     gap: 12,
   },
   input: {
-    height: 48,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
+    height: 44,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
     paddingHorizontal: 16,
     fontSize: 16,
-    fontWeight: '400',
-    color: '#374151',
-    fontFamily: 'Inter',
+    color: '#1C1C1E',
   },
   nameInput: {
     flex: 0.7,
   },
   emailContainer: {
-    marginBottom: 8,
+    marginBottom: 4,
   },
   emailLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#8E8E93',
     marginBottom: 8,
-    fontFamily: 'Inter',
   },
   emailField: {
-    height: 48,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
+    height: 44,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
     paddingHorizontal: 16,
     justifyContent: 'center',
+    opacity: 0.6,
   },
   emailText: {
     fontSize: 16,
-    color: '#6B7280',
-    fontFamily: 'Inter',
+    color: '#8E8E93',
   },
   datePickerContainer: {
-    height: 48,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
+    height: 44,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
     justifyContent: 'center',
   },
   dateInputContainer: {
@@ -1081,46 +939,27 @@ const styles = StyleSheet.create({
   dateInputText: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '400',
-    color: '#374151',
-    fontFamily: 'Inter',
+    color: '#1C1C1E',
   },
   dateInputPlaceholder: {
-    color: '#9CA3AF',
-  },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#0A1F44',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 20,
+    color: '#8E8E93',
   },
   saveButton: {
-    backgroundColor: '#133A7D',
-    height: 52,
-    borderRadius: 16,
+    backgroundColor: '#007AFF',
+    height: 50,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#133A7D',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    marginTop: 10,
+    marginBottom: 20,
   },
   saveButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   saveButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
-    fontFamily: 'Inter',
   },
   modalOverlay: {
     flex: 1,
@@ -1130,8 +969,8 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 12,
+    padding: 20,
     width: '90%',
     maxWidth: 400,
     shadowColor: '#000',
@@ -1147,13 +986,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
-    fontFamily: 'Inter',
+    color: '#1C1C1E',
   },
   closeButton: {
     padding: 4,
@@ -1161,7 +999,7 @@ const styles = StyleSheet.create({
   dateInputsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 20,
     gap: 12,
   },
   dateInputWrapper: {
@@ -1170,21 +1008,16 @@ const styles = StyleSheet.create({
   dateLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
+    color: '#1C1C1E',
     marginBottom: 8,
-    fontFamily: 'Inter',
   },
   dateInput: {
-    height: 48,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
+    height: 44,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
     paddingHorizontal: 16,
     fontSize: 16,
-    fontWeight: '400',
-    color: '#374151',
-    fontFamily: 'Inter',
+    color: '#1C1C1E',
     textAlign: 'center',
   },
   yearInput: {
@@ -1196,23 +1029,22 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    height: 48,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
+    height: 44,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#6B7280',
-    fontFamily: 'Inter',
+    color: '#8E8E93',
   },
   confirmButton: {
     flex: 1,
-    height: 48,
-    backgroundColor: '#133A7D',
-    borderRadius: 12,
+    height: 44,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1220,7 +1052,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
-    fontFamily: 'Inter',
   },
 });
 

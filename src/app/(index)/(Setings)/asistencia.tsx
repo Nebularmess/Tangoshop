@@ -88,44 +88,37 @@ const Asistencia = () => {
     {
       id: 'contact',
       title: 'Contactanos',
-      description: 'Nro tel: +54-3624-420686\nContacto@contacto.com\nCalle French 400 piso 2\nOficina 5a',
+      description: '+54-3624-420686\ncontacto@contacto.com\nFrench 400 / Piso 2 - Oficina 5A',
       icon: 'phone',
       onPress: handleContactUs,
     },
   ];
 
   const AssistanceItem = ({ option }: { option: AssistanceOption }) => (
-    <View style={styles.assistanceItemWrapper}>
-      <TouchableOpacity style={styles.assistanceItem} onPress={option.onPress}>
-        <View style={styles.itemContent}>
-          <View style={styles.iconSection}>
-            <View style={styles.iconContainer}>
-              <Icon name={option.icon} size={20} color="#374151" />
-            </View>
-          </View>
-          <View style={styles.textSection}>
-            <Text style={styles.optionTitle}>{option.title}</Text>
-            <Text style={styles.optionDescription}>{option.description}</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    </View>
+    <TouchableOpacity style={styles.assistanceItem} onPress={option.onPress}>
+      <View style={styles.iconContainer}>
+        <Icon name={option.icon} size={24} color="#007AFF" />
+      </View>
+      <View style={styles.textContainer}>
+        <Text style={styles.optionTitle}>{option.title}</Text>
+        <Text style={styles.optionDescription}>{option.description}</Text>
+      </View>
+      <Icon name="chevron-right" size={20} color="#C7C7CC" />
+    </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Header
-        title="Asistencia"
-        subtitle="¿En qué podemos ayudarte?"
-      >
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <View style={styles.backButtonCircle}>
-            <Icon name="arrow-left" size={20} color="#FFFFFF" />
-          </View>
-        </TouchableOpacity>
-      </Header>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Header
+          title="Asistencia"
+          subtitle="¿En qué podemos ayudarte?"
+        >
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Icon name="arrow-left" size={24} color="#007AFF" />
+          </TouchableOpacity>
+        </Header>
 
-      <View style={styles.contentContainer}>
         <ScrollView 
           style={styles.scrollContainer} 
           showsVerticalScrollIndicator={false}
@@ -141,98 +134,66 @@ const Asistencia = () => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#0A1F44',
+    backgroundColor: '#F5F5F5',
   },
   backButton: {
     position: 'absolute',
     left: 0,
     top: 0,
     zIndex: 10,
-  },
-  backButtonCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  contentContainer: {
-    flex: 1,
-    backgroundColor: '#0A1F44',
+    padding: 8,
   },
   scrollContainer: {
     flex: 1,
   },
   scrollContentContainer: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 10,
+    paddingBottom: 20,
   },
-  assistanceItemWrapper: {
+  assistanceItem: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginBottom: 16,
-    padding: 4,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  assistanceItem: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  itemContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 0,
-  },
-  iconSection: {
-    backgroundColor: '#FFFFFF',
-    width: 70,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 20,
+    shadowRadius: 3,
+    elevation: 2,
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F0F9FF',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    marginRight: 12,
   },
-  textSection: {
+  textContainer: {
     flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    paddingLeft: 12,
   },
   optionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 6,
-    fontFamily: 'Inter',
+    color: '#1C1C1E',
+    marginBottom: 4,
   },
   optionDescription: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: '#94A3B8',
-    lineHeight: 18,
-    fontFamily: 'Inter',
+    fontSize: 14,
+    color: '#8E8E93',
+    lineHeight: 20,
   },
 });
 
