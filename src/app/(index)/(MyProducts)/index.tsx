@@ -1,7 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ProductCard from '../(home)/components/ProductCard';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
@@ -9,11 +10,11 @@ import FilterPopup from '../../../components/products/FilterPopUp';
 import SearchBar from '../../../components/products/productsSearchBar';
 import usefetch from "../../../hooks/useFetch";
 import {
-    getFilteredProductsWithFavorites,
-    getSavedProducts,
-    ProductFilters,
-    searchFilteredProductsWithFavorites,
-    searchProductsWithFavorites
+  getFilteredProductsWithFavorites,
+  getSavedProducts,
+  ProductFilters,
+  searchFilteredProductsWithFavorites,
+  searchProductsWithFavorites
 } from '../../../utils/queryProduct';
 
 // Interface para el producto del backend (misma estructura que el index)
@@ -232,6 +233,11 @@ const FavoritesIndex = () => {
     await loadFavoriteProductsWithFilters({}, searchQuery);
   };
 
+  // Función para navegar a la calculadora de sobreprecio
+  const handleSurchargeCalculator = () => {
+    router.push('/surcharge');
+  };
+
   const renderProducto = (producto: BackendProduct) => (
     <ProductCard product={producto} />
   );
@@ -371,6 +377,19 @@ const FavoritesIndex = () => {
           }
         />
 
+        {/* Botón para calculadora de sobreprecio */}
+        {productos.length > 0 && (
+          <View style={styles.surchargeButtonContainer}>
+            <TouchableOpacity 
+              style={styles.surchargeButton}
+              onPress={handleSurchargeCalculator}
+            >
+              <Ionicons name="calculator-outline" size={20} color="white" />
+              <Text style={styles.surchargeButtonText}>Calculadora de Sobreprecio</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <FilterPopup
           visible={isFilterPopupVisible}
           onClose={handleCloseFilterPopup}
@@ -480,6 +499,31 @@ const styles = StyleSheet.create({
     color: '#D32F2F',
     textAlign: 'center',
     textDecorationLine: 'underline',
+  },
+  // Nuevos estilos para el botón de calculadora
+  surchargeButtonContainer: {
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
+  surchargeButton: {
+    backgroundColor: '#059669',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  surchargeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
 
