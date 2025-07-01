@@ -1,9 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Header from '../../../components/header';
-import NavBar from '../../../components/navBar';
+import useStore from '../../../hooks/useStorage';
 
 type Screen = 'index' | 'Proveedores' | 'Buscador' | 'Favoritos' | 'Configuracion';
 
@@ -16,17 +17,20 @@ interface SettingOption {
 
 const Index = () => {
   const [activeScreen, setActiveScreen] = useState<Screen>('Configuracion');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  const { clear: clearStorage } = useStore();
 
   const handleEditarCuenta = () => {
-    router.push('/editarPerfil');
+    router.push('/(index)/(Setings)/editarPerfil');
   };
 
   const handleMiCatalogo = () => {
-    router.push('/miCatalogo');
+    router.push('/(index)/(Setings)/miCatalogo');
   };
 
   const handleAsistencia = () => {
-    router.push('/asistencia');
+    router.push('/(index)/(Setings)/asistencia');
   };
 
   const handleCerrarSesion = () => {
@@ -41,12 +45,52 @@ const Index = () => {
         {
           text: 'Cerrar Sesión',
           style: 'destructive',
-          onPress: () => {
-            console.log('Cerrando sesión...');
-          },
+          onPress: performLogout,
         },
       ]
     );
+  };
+
+  const performLogout = async () => {
+    setIsLoggingOut(true);
+    
+    try {
+      if (Platform.OS === 'web') {
+        // Limpiar web storage
+        clearStorage();
+        if (typeof window !== 'undefined') {
+          window.localStorage?.clear();
+          window.sessionStorage?.clear();
+        }
+      } else {
+        // Limpiar móvil storage
+        await AsyncStorage.clear();
+        clearStorage();
+      }
+      
+      // Navegar a términos
+      router.replace('/(auth)/termsAgree');
+      
+    } catch (error) {
+      console.error('Error en logout:', error);
+      
+      // Fallback: limpiar lo que se pueda y navegar
+      try {
+        clearStorage();
+        if (Platform.OS === 'web') {
+          window.localStorage?.clear();
+          window.sessionStorage?.clear();
+        } else {
+          await AsyncStorage.clear();
+        }
+        router.replace('/(auth)/termsAgree');
+      } catch (fallbackError) {
+        // Último recurso: solo navegar
+        router.replace('/(auth)/termsAgree');
+      }
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   const settingsOptions: SettingOption[] = [
@@ -71,7 +115,11 @@ const Index = () => {
   ];
 
   const SettingItem = ({ option }: { option: SettingOption }) => (
-    <TouchableOpacity style={styles.settingItem} onPress={option.onPress}>
+    <TouchableOpacity 
+      style={styles.settingItem} 
+      onPress={option.onPress}
+      disabled={isLoggingOut}
+    >
       <View style={styles.settingItemContent}>
         <View style={styles.iconContainer}>
           {option.icon}
@@ -96,14 +144,29 @@ const Index = () => {
                 <SettingItem key={option.id} option={option} />
               ))}
             </View>
+
             <View style={styles.logoutSection}>
-              <TouchableOpacity style={styles.logoutButton} onPress={handleCerrarSesion}>
+              <TouchableOpacity 
+                style={[
+                  styles.logoutButton,
+                  isLoggingOut && styles.logoutButtonDisabled
+                ]} 
+                onPress={handleCerrarSesion}
+                disabled={isLoggingOut}
+              >
                 <View style={styles.iconContainer}>
-                  <Icon name="log-out" size={32} color="#FFFFFF" />
+                  <Icon 
+                    name={isLoggingOut ? "loader" : "log-out"} 
+                    size={32} 
+                    color="#FFFFFF" 
+                  />
                 </View>
-                <Text style={styles.logoutText}>Cerrar Sesión</Text>
+                <Text style={styles.logoutText}>
+                  {isLoggingOut ? 'Cerrando Sesión...' : 'Cerrar Sesión'}
+                </Text>
               </TouchableOpacity>
             </View>
+            
             <View style={styles.infoSection}>
               <Text style={styles.infoText}>Versión 1.0.0</Text>
               <Text style={styles.infoSubtext}>© 2025 Tango Shop</Text>
@@ -119,7 +182,6 @@ const Index = () => {
       <View style={styles.container}>
         {renderScreen()}
       </View>
-      <NavBar activeScreen={activeScreen} />
     </SafeAreaView>
   );
 };
@@ -180,22 +242,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 17,
   },
-  settingIcon: {
-    fontSize: 32,
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
   settingTitle: {
     fontSize: 24,
     fontWeight: '400',
     color: '#FFFFFF',
     flex: 1,
     fontFamily: 'Segoe UI',
-  },
-  settingArrow: {
-    fontSize: 20,
-    color: '#C0C0C0',
-    fontWeight: '300',
   },
   logoutSection: {
     marginBottom: 30,
@@ -221,9 +273,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1A2F55',
   },
-  logoutIcon: {
-    fontSize: 32,
-    color: '#FFFFFF',
+  logoutButtonDisabled: {
+    opacity: 0.6,
   },
   logoutText: {
     fontSize: 24,

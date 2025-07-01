@@ -1,22 +1,27 @@
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Clipboard,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Clipboard,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Header from '../../../components/header';
+import useAxios from '../../../hooks/useFetch';
+import useStore from '../../../hooks/useStorage';
 
 interface CatalogoData {
+  _id?: string;
+  userId: string;
   nombreTienda: string;
   descripcion: string;
   telefono: string;
@@ -24,24 +29,28 @@ interface CatalogoData {
   sitioWeb: string;
   referencias: string;
   imagenPortada: string;
+  productosSeleccionados: string[];
+  isPublic: boolean;
+  slug: string;
 }
 
 interface Producto {
-  id: string;
-  nombre: string;
-  precio: string;
-  imagen: string;
-  seleccionado: boolean;
+  _id: string;
+  name: string;
+  price: number;
+  image?: string;
+  description?: string;
+  category?: string;
 }
 
-interface Categoria {
-  id: string;
-  nombre: string;
-  seleccionada: boolean;
-}
+const EditarMiCatalogo = () => {
+  const { execute: fetchCatalog, loading: loadingCatalog } = useAxios();
+  const { execute: saveCatalog, loading: savingCatalog } = useAxios();
+  const { execute: fetchProducts, loading: loadingProducts } = useAxios();
+  const { getCurrentUser } = useStore();
 
-const MiCatalogo = () => {
   const [catalogoData, setCatalogoData] = useState<CatalogoData>({
+    userId: '',
     nombreTienda: '',
     descripcion: '',
     telefono: '',
@@ -49,30 +58,153 @@ const MiCatalogo = () => {
     sitioWeb: '',
     referencias: '',
     imagenPortada: '',
+    productosSeleccionados: [],
+    isPublic: true,
+    slug: '',
   });
 
-  const [productos] = useState<Producto[]>([
-
-  ]);
-
-  const [productosSeleccionados, setProductosSeleccionados] = useState<Producto[]>(
-    productos.filter(p => p.seleccionado)
-  );
-
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [showImageModal, setShowImageModal] = useState(false);
   const [tempImageUrl, setTempImageUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const catalogoUrl = `https://plataforma.com/catalogo/${catalogoData.nombreTienda.toLowerCase().replace(/\s+/g, '-') || 'usuario'}`;
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const currentUser = getCurrentUser();
+      
+      if (!currentUser?._id) {
+        Alert.alert('Error', 'No se encontró información del usuario');
+        router.back();
+        return;
+      }
+
+      // Cargar catálogo existente
+      await loadCatalog(currentUser._id);
+      
+      // Cargar productos del usuario
+      await loadUserProducts(currentUser._id);
+      
+    } catch (error) {
+      console.error('Error loading data:', error);
+      Alert.alert('Error', 'No se pudieron cargar los datos');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadCatalog = async (userId: string) => {
+    try {
+      const catalogQuery = [
+        {
+          "$match": {
+            "userId": userId,
+            "type": "catalog"
+          }
+        },
+        {
+          "$project": {
+            "createdAt": 0,
+            "updatedAt": 0,
+            "__v": 0
+          }
+        }
+      ];
+
+      const response = await fetchCatalog({
+        method: 'post',
+        url: '/api/findObjects',
+        data: catalogQuery,
+      });
+
+      if (response?.items && response.items.length > 0) {
+        const catalog = response.items[0];
+        setCatalogoData({
+          ...catalog,
+          productosSeleccionados: catalog.productosSeleccionados || [],
+        });
+      } else {
+        // Crear catálogo por defecto si no existe
+        const user = getCurrentUser();
+        setCatalogoData(prev => ({
+          ...prev,
+          userId: userId,
+          email: user?.email || '',
+          slug: generateSlug(user?.name || 'usuario'),
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading catalog:', error);
+    }
+  };
+
+  const loadUserProducts = async (userId: string) => {
+    try {
+      const productsQuery = [
+        {
+          "$match": {
+            "userId": userId,
+            "type": "product",
+            "status": { "$ne": "deleted" }
+          }
+        },
+        {
+          "$project": {
+            "name": 1,
+            "price": 1,
+            "image": 1,
+            "description": 1,
+            "category": 1
+          }
+        }
+      ];
+
+      const response = await fetchProducts({
+        method: 'post',
+        url: '/api/findObjects',
+        data: productsQuery,
+      });
+
+      if (response?.items) {
+        setProductos(response.items);
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+    }
+  };
+
+  const generateSlug = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+  };
+
+  const catalogoUrl = `https://catalogo.tangoshop.com/${catalogoData.slug || 'usuario'}`;
 
   const handleBack = () => {
     router.back();
   };
 
   const handleInputChange = (field: keyof CatalogoData, value: string) => {
-    setCatalogoData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+    setCatalogoData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      // Auto-generar slug cuando cambia el nombre de la tienda
+      if (field === 'nombreTienda' && value) {
+        newData.slug = generateSlug(value);
+      }
+      
+      return newData;
+    });
   };
 
   const handleCopiarUrl = () => {
@@ -101,36 +233,105 @@ const MiCatalogo = () => {
   };
 
   const toggleProducto = (productoId: string) => {
-    const producto = productos.find(p => p.id === productoId);
-    if (producto) {
-      setProductosSeleccionados(prev => {
-        const yaSeleccionado = prev.find(p => p.id === productoId);
-        if (yaSeleccionado) {
-          return prev.filter(p => p.id !== productoId);
-        } else {
-          return [...prev, producto];
-        }
-      });
-    }
+    setCatalogoData(prev => {
+      const isSelected = prev.productosSeleccionados.includes(productoId);
+      const newSelected = isSelected
+        ? prev.productosSeleccionados.filter(id => id !== productoId)
+        : [...prev.productosSeleccionados, productoId];
+      
+      return {
+        ...prev,
+        productosSeleccionados: newSelected
+      };
+    });
   };
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     if (!catalogoData.nombreTienda.trim()) {
       Alert.alert('Error', 'El nombre de la tienda es obligatorio.');
       return;
     }
 
-    Alert.alert(
-      'Catálogo Guardado',
-      '¡Tu catálogo ha sido actualizado exitosamente!',
-      [
-        {
-          text: 'OK',
-          onPress: () => console.log('Catálogo guardado:', catalogoData),
-        },
-      ]
-    );
+    if (!catalogoData.telefono.trim() && !catalogoData.email.trim()) {
+      Alert.alert('Error', 'Debes proporcionar al menos un teléfono o email de contacto.');
+      return;
+    }
+
+    try {
+      const currentUser = getCurrentUser();
+      if (!currentUser?._id) {
+        Alert.alert('Error', 'No se encontró información del usuario');
+        return;
+      }
+
+      const catalogData = {
+        ...catalogoData,
+        userId: currentUser._id,
+        type: 'catalog',
+        slug: catalogoData.slug || generateSlug(catalogoData.nombreTienda),
+        updatedAt: new Date().toISOString(),
+      };
+
+      let response;
+      
+      if (catalogoData._id) {
+        // Actualizar catálogo existente
+        response = await saveCatalog({
+          method: 'post',
+          url: `/api/updateObject/${catalogoData._id}`,
+          data: catalogData
+        });
+      } else {
+        // Crear nuevo catálogo
+        response = await saveCatalog({
+          method: 'post',
+          url: '/api/createObject',
+          data: {
+            ...catalogData,
+            createdAt: new Date().toISOString(),
+          }
+        });
+      }
+
+      if (response) {
+        Alert.alert(
+          '¡Éxito!',
+          'Tu catálogo ha sido guardado correctamente.',
+          [
+            {
+              text: 'Ver Catálogo',
+              onPress: () => {
+                // Aquí podrías abrir el catálogo en un navegador
+                console.log('Abrir catálogo:', catalogoUrl);
+              }
+            },
+            {
+              text: 'OK',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error saving catalog:', error);
+      Alert.alert('Error', 'No se pudo guardar el catálogo. Inténtalo de nuevo.');
+    }
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header
+          title="Mi Catálogo"
+          subtitle="Personaliza tu catálogo público"
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.loadingText}>Cargando catálogo...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -191,14 +392,24 @@ const MiCatalogo = () => {
             {/* Campos de texto */}
             <View style={styles.inputGroup}>
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Título del Catálogo</Text>
+                <Text style={styles.fieldLabel}>Título del Catálogo *</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="Ej: Ferretería de Juan"
                   placeholderTextColor="#9CA3AF"
                   value={catalogoData.nombreTienda}
                   onChangeText={(value) => handleInputChange('nombreTienda', value)}
+                  editable={!savingCatalog}
                 />
+              </View>
+
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>URL del Catálogo</Text>
+                <View style={styles.urlPreview}>
+                  <Text style={styles.urlPreviewText}>
+                    catalogo.tangoshop.com/{catalogoData.slug || 'usuario'}
+                  </Text>
+                </View>
               </View>
 
               <View style={styles.fieldContainer}>
@@ -212,11 +423,12 @@ const MiCatalogo = () => {
                   multiline={true}
                   numberOfLines={3}
                   textAlignVertical="top"
+                  editable={!savingCatalog}
                 />
               </View>
 
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Número de Contacto</Text>
+                <Text style={styles.fieldLabel}>Número de Contacto *</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="+54 9 11 1234-5678"
@@ -224,19 +436,21 @@ const MiCatalogo = () => {
                   value={catalogoData.telefono}
                   onChangeText={(value) => handleInputChange('telefono', value)}
                   keyboardType="phone-pad"
+                  editable={!savingCatalog}
                 />
               </View>
 
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Email</Text>
+                <Text style={styles.fieldLabel}>Email *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="contacto@mineogcio.com"
+                  placeholder="contacto@minegocio.com"
                   placeholderTextColor="#9CA3AF"
                   value={catalogoData.email}
                   onChangeText={(value) => handleInputChange('email', value)}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  editable={!savingCatalog}
                 />
               </View>
 
@@ -250,6 +464,7 @@ const MiCatalogo = () => {
                   onChangeText={(value) => handleInputChange('sitioWeb', value)}
                   keyboardType="url"
                   autoCapitalize="none"
+                  editable={!savingCatalog}
                 />
               </View>
 
@@ -264,37 +479,51 @@ const MiCatalogo = () => {
                   multiline={true}
                   numberOfLines={3}
                   textAlignVertical="top"
+                  editable={!savingCatalog}
                 />
               </View>
             </View>
 
             {/* Selección de Productos */}
-            {productos.length >= 0 && (
+            {productos.length > 0 && (
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>Mis Productos</Text>
-                <Text style={styles.fieldSubtitle}>Selecciona los productos que quieres mostrar</Text>
+                <Text style={styles.fieldSubtitle}>
+                  Selecciona los productos que quieres mostrar ({catalogoData.productosSeleccionados.length} seleccionados)
+                </Text>
                 <View style={styles.productsList}>
                   {productos.map((producto) => (
                     <TouchableOpacity
-                      key={producto.id}
+                      key={producto._id}
                       style={[
                         styles.productItem,
-                        productosSeleccionados.find(p => p.id === producto.id) && styles.productItemSelected
+                        catalogoData.productosSeleccionados.includes(producto._id) && styles.productItemSelected
                       ]}
-                      onPress={() => toggleProducto(producto.id)}
+                      onPress={() => toggleProducto(producto._id)}
+                      disabled={savingCatalog}
                     >
                       <View style={styles.productInfo}>
-                        <Text style={styles.productName}>{producto.nombre}</Text>
-                        <Text style={styles.productPrice}>{producto.precio}</Text>
+                        <Text style={styles.productName}>{producto.name}</Text>
+                        <Text style={styles.productPrice}>${producto.price}</Text>
                       </View>
                       <Icon 
-                        name={productosSeleccionados.find(p => p.id === producto.id) ? "check-circle" : "circle"} 
+                        name={catalogoData.productosSeleccionados.includes(producto._id) ? "check-circle" : "circle"} 
                         size={20} 
-                        color={productosSeleccionados.find(p => p.id === producto.id) ? "#133A7D" : "#9CA3AF"} 
+                        color={catalogoData.productosSeleccionados.includes(producto._id) ? "#133A7D" : "#9CA3AF"} 
                       />
                     </TouchableOpacity>
                   ))}
                 </View>
+              </View>
+            )}
+
+            {productos.length === 0 && (
+              <View style={styles.noProductsContainer}>
+                <Icon name="package" size={48} color="#9CA3AF" />
+                <Text style={styles.noProductsText}>Aún no tienes productos</Text>
+                <Text style={styles.noProductsSubtext}>
+                  Agrega productos desde la sección "Mis Productos" para mostrarlos en tu catálogo
+                </Text>
               </View>
             )}
           </View>
@@ -317,8 +546,16 @@ const MiCatalogo = () => {
           </View>
 
           {/* Botón Guardar */}
-          <TouchableOpacity style={styles.saveButton} onPress={handleGuardar}>
-            <Text style={styles.saveButtonText}>Guardar Catálogo</Text>
+          <TouchableOpacity 
+            style={[styles.saveButton, savingCatalog && styles.saveButtonDisabled]} 
+            onPress={handleGuardar}
+            disabled={savingCatalog}
+          >
+            {savingCatalog ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.saveButtonText}>Guardar Catálogo</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -369,6 +606,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0A1F44',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
   },
   backButton: {
     position: 'absolute',
@@ -492,6 +740,18 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     paddingTop: 12,
   },
+  urlPreview: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  urlPreviewText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
   productsList: {
     gap: 8,
   },
@@ -521,6 +781,28 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 14,
     color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  noProductsContainer: {
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  noProductsText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#374151',
+    marginTop: 16,
+    fontFamily: 'Inter',
+  },
+  noProductsSubtext: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
     fontFamily: 'Inter',
   },
   urlContainer: {
@@ -566,6 +848,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
   },
   saveButtonText: {
     fontSize: 18,
@@ -663,4 +948,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MiCatalogo;
+export default EditarMiCatalogo;
