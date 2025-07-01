@@ -5,7 +5,8 @@ import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
 import FilterPopup from '../../../components/products/FilterPopUp';
-import ProductCard from '../../../components/products/ProductCard';
+//import ProductCard from '../../../components/products/ProductCard';
+import ProductCard from '../(home)/components/ProductCard';
 import SearchBar from '../../../components/products/productsSearchBar';
 import usefetch from "../../../hooks/useFetch";
 import {
@@ -21,18 +22,14 @@ interface BackendProduct {
   _id: string;
   name: string;
   description: string;
-  type: string;
   categorie: string;
-  tags?: string[];
+  type: string;
+  tags: string[];
   props: {
     price: number;
-    images?: string[];
-    [key: string]: any;
+    images: string[];
   };
-  published: string;
-  saved_product: {
-    _id: string;
-  }[]; // Array vacío = no guardado, con elementos = guardado
+  saved_product: { _id: string }[];
 }
 
 // Interface para la respuesta de la API
@@ -303,8 +300,8 @@ const Index = () => {
     await loadProductsWithFilters(clearedFilters, searchQuery);
   };
 
-  const renderProducto = (producto: BackendProduct) => (
-    <ProductCard
+  /* 
+  <ProductCard
       product={producto} // Pasamos todo el objeto del backend
       onPress={() => {
         try{ 
@@ -315,6 +312,10 @@ const Index = () => {
       }} 
       onToggleFavorite={() => handleToggleFavorite(producto._id)}
     />
+  */
+
+  const renderProducto = (producto: BackendProduct) => (
+    <ProductCard product={producto} />
   );
 
   const handleRefresh = async () => {
