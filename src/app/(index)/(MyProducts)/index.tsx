@@ -1,8 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import ProductCard from '../(home)/components/ProductCard';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
@@ -233,11 +232,6 @@ const FavoritesIndex = () => {
     await loadFavoriteProductsWithFilters({}, searchQuery);
   };
 
-  // Función para navegar a la calculadora de sobreprecio
-  const handleSurchargeCalculator = () => {
-    router.push('/surcharge');
-  };
-
   const renderProducto = (producto: BackendProduct) => (
     <ProductCard product={producto} />
   );
@@ -377,18 +371,6 @@ const FavoritesIndex = () => {
           }
         />
 
-        {/* Botón para calculadora de sobreprecio */}
-        {productos.length > 0 && (
-          <View style={styles.surchargeButtonContainer}>
-            <TouchableOpacity 
-              style={styles.surchargeButton}
-              onPress={handleSurchargeCalculator}
-            >
-              <Ionicons name="calculator-outline" size={20} color="white" />
-              <Text style={styles.surchargeButtonText}>Calculadora de Sobreprecio</Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
         <FilterPopup
           visible={isFilterPopupVisible}

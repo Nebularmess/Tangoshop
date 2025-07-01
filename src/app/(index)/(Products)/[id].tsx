@@ -216,12 +216,13 @@ export default function ProductoDetalle() {
           url: '/api/createRelation',
           data: relation,
         });
+        console.log("Resultado de la solicitud:", result);
 
         if (result?.item?._id) {
           // Actualizar el estado local del producto
           setProducto(prev => prev ? {
             ...prev,
-            saved_product: result.item
+            saved_product: [result.item]
           } : null);
         } else {
           console.log("No se pudo guardar el producto:", errorFetch);
