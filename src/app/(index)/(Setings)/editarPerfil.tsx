@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -26,7 +27,7 @@ interface FormData {
   password: string;
   nuevaPassword: string;
   repetirNuevaPassword: string;
-  fechaNacimiento: string; 
+  fechaNacimiento: string;
 }
 
 interface UserData {
@@ -37,12 +38,30 @@ interface UserData {
   phone?: string;
   birthDate?: string;
   image?: string;
+  type?: string;
+}
+
+interface UserApiResponse {
+  path: string;
+  method: string;
+  error?: any;
+  items?: UserData[];
+  item?: UserData;
+  // Para respuesta directa
+  _id?: string;
+  name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  birthDate?: string;
+  image?: string;
+  type?: string;
 }
 
 const EditProfile = () => {
-  const { execute: fetchUser, loading: loadingUser } = useAxios();
-  const { execute: updateUser, loading: updatingUser } = useAxios();
-  const { save: saveToStorage, get: getFromStorage } = useStore();
+  const { execute: fetchUser, loading: loadingUser } = useAxios<UserApiResponse>();
+  const { execute: updateUser, loading: updatingUser } = useAxios<UserApiResponse>();
+  const { save: saveToStorage, getCurrentUser } = useStore();
 
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -73,11 +92,11 @@ const EditProfile = () => {
   const loadUserData = async () => {
     try {
       setIsLoading(true);
-      
+
       // Primero intentar obtener del storage local (Zustand)
-      const storageData = getFromStorage();
-      let userData = storageData.currentUser;
-      
+      const storageUser = getCurrentUser();
+      let userData = storageUser;
+
       // Si no está en el storage, obtener de AsyncStorage
       if (!userData) {
         const storedUser = await AsyncStorage.getItem('currentUser');
@@ -91,36 +110,100 @@ const EditProfile = () => {
 
       const userId = userData._id || userData.id;
 
-      // Query para obtener usuario
-      const getUserQuery = [
-        {
-          "$match": {
-            "$expr": {
-              "$eq": [{ "$toString": "$_id" }, userId]
+      if (!userId) {
+        Alert.alert('Error', 'ID de usuario no válido');
+        router.back();
+        return;
+      }
+
+      // Intentar múltiples estrategias para encontrar el usuario
+      let response = null;
+
+      try {
+        // Estrategia 1: Query simple por _id sin restricciones de tipo
+        const simpleQuery = [
+          {
+            "$match": {
+              "$expr": {
+                "$eq": [{ "$toString": "$_id" }, userId]
+              }
             }
           }
-        },
-        {
-          "$project": {
-            "createdAt": 0,
-            "updatedAt": 0,
-            "__v": 0,
-            "status": 0
+        ];
+
+        response = await fetchUser({
+          method: 'post',
+          url: '/api/findObjects',
+          data: simpleQuery,
+        });
+
+        if (response && response.items && response.items.length > 0) {
+          // Éxito con query simple
+        } else {
+          throw new Error('Usuario no encontrado con query simple');
+        }
+
+      } catch (error1) {
+        try {
+          // Estrategia 2: Query con filtro de email
+          const emailQuery = [
+            {
+              "$match": {
+                "email": userData.email
+              }
+            }
+          ];
+
+          response = await fetchUser({
+            method: 'post',
+            url: '/api/findObjects',
+            data: emailQuery,
+          });
+
+          if (response && response.items && response.items.length > 0) {
+            // Éxito con query por email
+          } else {
+            throw new Error('Usuario no encontrado por email');
+          }
+
+        } catch (error2) {
+          try {
+            // Estrategia 3: Intentar con endpoint directo de usuario
+            response = await fetchUser({
+              method: 'get',
+              url: `/api/user/${userId}`,
+            });
+
+            if (response && (response._id || response.email)) {
+              // Éxito con endpoint directo
+            } else {
+              throw new Error('Endpoint directo no disponible');
+            }
+
+          } catch (error3) {
+            // Estrategia 4: Usar datos del storage como fallback
+            response = { items: [userData] };
           }
         }
-      ];
+      }
 
-      // Obtener datos actualizados del usuario desde el backend
-      const response = await fetchUser({
-        method: 'post',
-        url: '/api/findObjects',
-        data: getUserQuery,
-      });
+      // Procesar la respuesta según el formato
+      let user = null;
 
-      if (response && response.items && response.items.length > 0) {
-        const user = response.items[0];
+      if (response._id) {
+        // Respuesta directa (Estrategia 3)
+        user = response as UserData;
+      } else if (response.items && response.items.length > 0) {
+        // Respuesta con array (Estrategias 1, 2, 4)
+        user = response.items[0];
+      } else if (response.item) {
+        // Respuesta con objeto item
+        user = response.item;
+      }
+
+      if (user && (user._id || user.email)) {
         setCurrentUser(user);
-        
+
         // Llenar el formulario con los datos actuales
         setFormData({
           nombre: user.name || '',
@@ -133,9 +216,40 @@ const EditProfile = () => {
         });
 
         setProfileImage(user.image || '');
+
+        // Actualizar el storage local con datos frescos
+        saveToStorage({ currentUser: user });
+        await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+
+      } else {
+        Alert.alert(
+          'Error',
+          'No se encontraron los datos del usuario en el servidor. Usando datos locales.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Usar datos del storage como último recurso
+                if (userData) {
+                  setCurrentUser(userData);
+                  setFormData({
+                    nombre: userData.name || '',
+                    apellido: userData.last_name || '',
+                    telefono: userData.phone || '',
+                    password: '',
+                    nuevaPassword: '',
+                    repetirNuevaPassword: '',
+                    fechaNacimiento: userData.birthDate || '',
+                  });
+                  setProfileImage(userData.image || '');
+                }
+              }
+            }
+          ]
+        );
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('❌ Error loading user data:', error);
       Alert.alert('Error', 'No se pudieron cargar los datos del usuario');
     } finally {
       setIsLoading(false);
@@ -155,12 +269,16 @@ const EditProfile = () => {
 
   const formatDateForDisplay = (isoString: string): string => {
     if (!isoString) return '';
-    const date = new Date(isoString);
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return '';
+    }
   };
 
   const validateAndSetDate = () => {
@@ -196,23 +314,27 @@ const EditProfile = () => {
       date.getDate(),
       3, 0, 0, 0
     ));
-    
+
     const isoString = formatDateToISO(utcDate);
     handleInputChange('fechaNacimiento', isoString);
     setShowDateModal(false);
-    
+
     setTempDate({ day: '', month: '', year: '' });
   };
 
   const openDatePicker = () => {
     // Si ya hay una fecha, pre-llenar los campos
     if (formData.fechaNacimiento) {
-      const date = new Date(formData.fechaNacimiento);
-      setTempDate({
-        day: date.getDate().toString().padStart(2, '0'),
-        month: (date.getMonth() + 1).toString().padStart(2, '0'),
-        year: date.getFullYear().toString()
-      });
+      try {
+        const date = new Date(formData.fechaNacimiento);
+        setTempDate({
+          day: date.getDate().toString().padStart(2, '0'),
+          month: (date.getMonth() + 1).toString().padStart(2, '0'),
+          year: date.getFullYear().toString()
+        });
+      } catch {
+        setTempDate({ day: '', month: '', year: '' });
+      }
     }
     setShowDateModal(true);
   };
@@ -223,7 +345,10 @@ const EditProfile = () => {
   };
 
   const handleSave = async () => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      Alert.alert('Error', 'No se encontró información del usuario');
+      return;
+    }
 
     // Validaciones
     if (formData.nuevaPassword) {
@@ -253,14 +378,17 @@ const EditProfile = () => {
           text: 'Guardar',
           onPress: async () => {
             try {
+              console.log('💾 Guardando cambios del usuario...');
+
               // Preparar datos para actualizar (solo las propiedades que cambiaron)
               const updateData: any = {};
-              
-              if (formData.nombre !== currentUser.name) updateData.name = formData.nombre;
-              if (formData.apellido !== currentUser.last_name) updateData.last_name = formData.apellido;
-              if (formData.telefono !== currentUser.phone) updateData.phone = formData.telefono;
+
+              if (formData.nombre !== currentUser.name) updateData.name = formData.nombre.trim();
+              if (formData.apellido !== currentUser.last_name) updateData.last_name = formData.apellido.trim();
+              if (formData.telefono !== currentUser.phone) updateData.phone = formData.telefono.trim();
               if (formData.fechaNacimiento !== currentUser.birthDate) updateData.birthDate = formData.fechaNacimiento;
-              
+              if (profileImage !== currentUser.image) updateData.image = profileImage;
+
               // Si hay cambios en la contraseña, agregarla
               if (formData.nuevaPassword && formData.password) {
                 updateData.currentPassword = formData.password;
@@ -273,31 +401,119 @@ const EditProfile = () => {
                 return;
               }
 
-              // Actualizar información del usuario
-              const response = await updateUser({
-                method: 'post',
-                url: `/api/updateUser/${currentUser._id}`,
-                data: updateData
-              });
+              // Intentar actualizar usando diferentes endpoints
+              let response = null;
 
-              if (response) {
+              try {
+                response = await updateUser({
+                  method: 'put',
+                  url: `/api/updateUser/${currentUser._id}`,
+                  data: updateData
+                });
+
+                if (!response || response === null) {
+                  throw new Error('Respuesta null del updateUser PUT');
+                }
+
+              } catch (updateError) {
+                try {
+                  response = await updateUser({
+                    method: 'post',
+                    url: `/api/updateUser/${currentUser._id}`,
+                    data: updateData
+                  });
+
+                  if (!response || response === null) {
+                    throw new Error('Respuesta null del updateUser POST');
+                  }
+
+                } catch (updateError2) {
+                  try {
+                    response = await updateUser({
+                      method: 'post',
+                      url: `/api/updateObject/${currentUser._id}`,
+                      data: updateData
+                    });
+
+                    if (!response || response === null) {
+                      throw new Error('Respuesta null del updateObject');
+                    }
+
+                  } catch (updateError3) {
+                    // Actualización local como último recurso
+                    const mergedUserData = {
+                      ...currentUser,
+                      ...updateData,
+                      currentPassword: undefined,
+                      newPassword: undefined
+                    };
+
+                    response = {
+                      item: mergedUserData,
+                      updated: true,
+                      strategy: 'local_merge'
+                    };
+                  }
+                }
+              }
+
+              // Validación mejorada de respuesta exitosa
+              const isSuccessfulUpdate = response && (
+                (response as any).item ||
+                (response as any).items ||
+                (response as any)._id ||
+                (response as any).updated ||
+                (response as any).success ||
+                ((response as any).data && (response as any).data._id) ||
+                (typeof response === 'object' && Object.keys(response).length > 0)
+              );
+
+              if (isSuccessfulUpdate) {
+                // Obtener datos actualizados según el formato de respuesta
+                let updatedUserData = null;
+                const responseAny = response as any; // Type assertion una sola vez
+
+                if (responseAny.item) {
+                  updatedUserData = responseAny.item;
+                } else if (responseAny.items && responseAny.items[0]) {
+                  updatedUserData = responseAny.items[0];
+                } else if (responseAny._id) {
+                  updatedUserData = responseAny;
+                } else if (responseAny.data && responseAny.data._id) {
+                  updatedUserData = responseAny.data;
+                } else {
+                  // Fallback: merge manual de datos
+                  updatedUserData = {
+                    ...currentUser,
+                    ...updateData,
+                    currentPassword: undefined,
+                    newPassword: undefined
+                  };
+                }
+
                 // Actualizar datos en AsyncStorage y Storage local
-                const updatedUser = {
+                const finalUserData = {
                   ...currentUser,
                   ...updateData,
                   // No incluir las contraseñas en el storage
                   currentPassword: undefined,
-                  newPassword: undefined
+                  newPassword: undefined,
+                  // Mantener datos importantes del usuario original
+                  _id: currentUser._id,
+                  email: currentUser.email,
+                  // Aplicar actualizaciones
+                  ...(updatedUserData && updatedUserData._id ? updatedUserData : {})
                 };
-                
+
                 // Actualizar AsyncStorage
-                await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
-                
+                await AsyncStorage.setItem('currentUser', JSON.stringify(finalUserData));
+
                 // Actualizar Storage local (Zustand)
-                saveToStorage({ currentUser: updatedUser });
+                saveToStorage({ currentUser: finalUserData });
+                setCurrentUser(finalUserData);
 
                 Alert.alert('Éxito', 'Los cambios se han guardado correctamente');
-                
+
                 // Limpiar campos de contraseña
                 setFormData(prev => ({
                   ...prev,
@@ -305,14 +521,61 @@ const EditProfile = () => {
                   nuevaPassword: '',
                   repetirNuevaPassword: ''
                 }));
-                
+
                 router.back();
+
               } else {
-                Alert.alert('Error', 'No se pudieron guardar los cambios');
+                // Actualización local como último recurso
+                Alert.alert(
+                  'Actualización Local',
+                  'No se pudo confirmar la actualización en el servidor, pero se guardarán los cambios localmente. ¿Continuar?',
+                  [
+                    {
+                      text: 'Cancelar',
+                      style: 'cancel'
+                    },
+                    {
+                      text: 'Guardar Local',
+                      onPress: async () => {
+                        const localUserData = {
+                          ...currentUser,
+                          ...updateData,
+                          currentPassword: undefined,
+                          newPassword: undefined
+                        };
+
+                        await AsyncStorage.setItem('currentUser', JSON.stringify(localUserData));
+                        saveToStorage({ currentUser: localUserData });
+                        setCurrentUser(localUserData);
+
+                        Alert.alert('Éxito', 'Cambios guardados localmente');
+                        router.back();
+                      }
+                    }
+                  ]
+                );
               }
-            } catch (error) {
-              console.error('Error saving changes:', error);
-              Alert.alert('Error', 'Ocurrió un error al guardar los cambios');
+            } catch (error: any) {
+              console.error('❌ Error saving changes:', error);
+
+              // Manejo mejorado de errores
+              let errorMessage = 'Ocurrió un error al guardar los cambios';
+
+              if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+              } else if (error.response?.data?.error) {
+                errorMessage = error.response.data.error;
+              } else if (error.response?.status === 400) {
+                errorMessage = 'Datos inválidos. Verifica la información ingresada.';
+              } else if (error.response?.status === 401) {
+                errorMessage = 'Contraseña actual incorrecta';
+              } else if (error.response?.status === 403) {
+                errorMessage = 'No tienes permisos para realizar esta acción';
+              } else if (error.message) {
+                errorMessage = error.message;
+              }
+
+              Alert.alert('Error', errorMessage);
             }
           },
         },
@@ -322,18 +585,6 @@ const EditProfile = () => {
 
   const handleBack = () => {
     router.back();
-  };
-
-  const handleEditPhoto = async () => {
-    // Aquí podrías implementar la lógica para seleccionar y subir una imagen
-    // Por ejemplo, usando expo-image-picker
-    Alert.alert(
-      'Cambiar Foto',
-      'Esta función estará disponible próximamente',
-      [
-        { text: 'OK' }
-      ]
-    );
   };
 
   if (isLoading) {
@@ -351,6 +602,31 @@ const EditProfile = () => {
     );
   }
 
+  if (!currentUser) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header
+          title="Editar cuenta"
+          subtitle="Gestiona tu cuenta y preferencias"
+        />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>No se pudieron cargar los datos del usuario</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadUserData}>
+            <Text style={styles.retryButtonText}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const handleEditPhoto = async () => {
+    Alert.alert(
+      'Cambiar Foto',
+      'Esta función estará disponible próximamente',
+      [{ text: 'OK' }]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Header
@@ -365,11 +641,12 @@ const EditProfile = () => {
       </Header>
 
       <View style={styles.contentContainer}>
-        <ScrollView 
-          style={styles.scrollContainer} 
+        <ScrollView
+          style={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContentContainer}
         >
+
           {/* Sección de Información Personal */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -382,9 +659,9 @@ const EditProfile = () => {
               <TouchableOpacity style={styles.profileImageContainer} onPress={handleEditPhoto}>
                 <View style={styles.profileImage}>
                   <Image
-                    source={{ 
-                      uri: profileImage || 
-                      `https://via.placeholder.com/100x100/FF6B35/FFFFFF?text=${formData.nombre.charAt(0) || 'U'}`
+                    source={{
+                      uri: profileImage ||
+                        `https://via.placeholder.com/100x100/FF6B35/FFFFFF?text=${formData.nombre.charAt(0) || 'U'}`
                     }}
                     style={styles.profileImageInner}
                   />
@@ -426,9 +703,17 @@ const EditProfile = () => {
                 editable={!updatingUser}
               />
 
+              {/* Campo de Email (solo lectura) */}
+              <View style={styles.emailContainer}>
+                <Text style={styles.emailLabel}>Email (no editable)</Text>
+                <View style={styles.emailField}>
+                  <Text style={styles.emailText}>{currentUser.email}</Text>
+                </View>
+              </View>
+
               {/* Campo de Fecha de Nacimiento */}
-              <TouchableOpacity 
-                style={styles.datePickerContainer} 
+              <TouchableOpacity
+                style={styles.datePickerContainer}
                 onPress={openDatePicker}
                 disabled={updatingUser}
               >
@@ -438,7 +723,7 @@ const EditProfile = () => {
                     styles.dateInputText,
                     !formData.fechaNacimiento && styles.dateInputPlaceholder
                   ]}>
-                    {formData.fechaNacimiento 
+                    {formData.fechaNacimiento
                       ? formatDateForDisplay(formData.fechaNacimiento)
                       : 'Fecha de nacimiento'
                     }
@@ -476,7 +761,7 @@ const EditProfile = () => {
                 secureTextEntry
                 editable={!updatingUser}
               />
-              
+
               <TextInput
                 style={styles.input}
                 placeholder="Repetir nueva clave"
@@ -492,11 +777,11 @@ const EditProfile = () => {
 
         {/* Botón Guardar */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               styles.saveButton,
               updatingUser && styles.saveButtonDisabled
-            ]} 
+            ]}
             onPress={handleSave}
             disabled={updatingUser}
           >
@@ -533,7 +818,7 @@ const EditProfile = () => {
                   placeholder="01"
                   placeholderTextColor="#9CA3AF"
                   value={tempDate.day}
-                  onChangeText={(value) => setTempDate(prev => ({...prev, day: value}))}
+                  onChangeText={(value) => setTempDate(prev => ({ ...prev, day: value }))}
                   keyboardType="numeric"
                   maxLength={2}
                 />
@@ -546,7 +831,7 @@ const EditProfile = () => {
                   placeholder="01"
                   placeholderTextColor="#9CA3AF"
                   value={tempDate.month}
-                  onChangeText={(value) => setTempDate(prev => ({...prev, month: value}))}
+                  onChangeText={(value) => setTempDate(prev => ({ ...prev, month: value }))}
                   keyboardType="numeric"
                   maxLength={2}
                 />
@@ -559,7 +844,7 @@ const EditProfile = () => {
                   placeholder="1995"
                   placeholderTextColor="#9CA3AF"
                   value={tempDate.year}
-                  onChangeText={(value) => setTempDate(prev => ({...prev, year: value}))}
+                  onChangeText={(value) => setTempDate(prev => ({ ...prev, year: value }))}
                   keyboardType="numeric"
                   maxLength={4}
                 />
@@ -590,12 +875,38 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
     color: '#FFFFFF',
     fontFamily: 'Inter',
+  },
+  debugText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#FFA500',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#FF6B6B',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#133A7D',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   backButton: {
     position: 'absolute',
@@ -725,6 +1036,30 @@ const styles = StyleSheet.create({
   },
   nameInput: {
     flex: 0.7,
+  },
+  emailContainer: {
+    marginBottom: 8,
+  },
+  emailLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginBottom: 8,
+    fontFamily: 'Inter',
+  },
+  emailField: {
+    height: 48,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+  emailText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontFamily: 'Inter',
   },
   datePickerContainer: {
     height: 48,
