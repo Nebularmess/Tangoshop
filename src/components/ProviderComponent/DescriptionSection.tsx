@@ -46,15 +46,10 @@ const DescriptionSection: React.FC<DescriptionSectionProps> = ({
       </View>
     );
   }
-
-  // Si no hay descripción, no mostrar el componente
+// no nos muiestra el comp si no hay des
   if (!description || description.trim().length === 0) {
     return null;
   }
-
-  // Debug log para verificar qué descripción llega
-  console.log('🔍 DescriptionSection recibió:', { title, description: description?.substring(0, 50) + '...' });
-
   return (
     <View className='px-4 py-3'>
       {/* Título de la sección */}

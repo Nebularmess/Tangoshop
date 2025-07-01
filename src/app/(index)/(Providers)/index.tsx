@@ -39,6 +39,7 @@ const Index = () => {
   const [proveedoresFiltrados, setProveedoresFiltrados] = useState<Provider[]>([]);
   const [activeScreen, setActiveScreen] = useState<Screen>('index');
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true); // Nuevo estado
 
   // Hook para obtener datos del backend
   const { data: providers, execute: fetchProviders, loading: loadingProviders } = usefetch<ProvidersApiResponse>();
@@ -48,7 +49,18 @@ const Index = () => {
     fetchProviders({ method: 'post', url: '/api/findObjects', data: getProviders });
   }, []);
 
-  // Efecto para filtrar proveedores cuando cambia la búsqueda o llegan nuevos datos
+  // Efecto para controlar la carga inicial
+  useEffect(() => {
+    if (providers?.items && providers.items.length > 0) {
+      // Solo quitar el loading inicial cuando tengamos datos reales
+      setIsInitialLoading(false);
+    } else if (!loadingProviders && providers && providers.items?.length === 0) {
+      // Si terminó de cargar y no hay datos, quitar loading
+      setIsInitialLoading(false);
+    }
+  }, [providers, loadingProviders]);
+
+  // Efecto separado para filtrar proveedores
   useEffect(() => {
     if (!providers?.items) {
       setProveedoresFiltrados([]);
@@ -133,6 +145,9 @@ const Index = () => {
     </View>
   );
 
+  // Determinar si mostrar loading (más estricto para la primera carga)
+  const shouldShowLoading = isInitialLoading || (loadingProviders && (proveedoresFiltrados.length === 0 && !providers?.items));
+
   const renderScreen = () => {
     switch (activeScreen) {
       case 'index':
@@ -149,7 +164,7 @@ const Index = () => {
               />
             </Header>
             
-            {loadingProviders ? (
+            {shouldShowLoading ? (
               <LoadingComponent />
             ) : (
               <GenericList
@@ -181,7 +196,7 @@ const Index = () => {
             {/* Mostrar resultados de búsqueda aquí si hay query */}
             {searchQuery.trim() !== '' && (
               <View style={{ marginTop: 20, flex: 1 }}>
-                {loadingProviders ? (
+                {shouldShowLoading ? (
                   <LoadingComponent />
                 ) : (
                   <GenericList
@@ -204,7 +219,7 @@ const Index = () => {
               title="Listado Completo" 
               subtitle="Todos los proveedores disponibles"
             />
-            {loadingProviders ? (
+            {shouldShowLoading ? (
               <LoadingComponent />
             ) : (
               <GenericList

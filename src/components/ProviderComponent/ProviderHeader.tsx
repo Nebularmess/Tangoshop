@@ -76,15 +76,7 @@ const ProviderHeader: React.FC<ProviderHeaderProps> = ({
         <MaterialCommunityIcons name="arrow-left" size={24} color="#374151" />
       </TouchableOpacity>
       
-      {/* Botón de compartir */}
-      <TouchableOpacity
-        className='absolute top-12 right-4 bg-white/90 rounded-full p-2'
-        activeOpacity={0.8}
-      >
-        <MaterialCommunityIcons name="share-variant" size={24} color="#374151" />
-      </TouchableOpacity>
-      
-      {/* Logo del proveedor - hacia la IZQUIERDA, con z-index alto */}
+      {/* Logo del proveedor*/}
       <View 
         className='absolute left-6 bg-white p-2 rounded-2xl border-4 border-white'
         style={{ 

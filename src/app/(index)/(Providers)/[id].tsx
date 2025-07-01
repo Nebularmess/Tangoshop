@@ -304,46 +304,50 @@ const ProviderDetailScreen = () => {
             </CardContainer>
 
             <CardContainer>
-              <SectionHeader
-                title="Información de Contacto"
-                icon="card-account-details"
-                isLoading={loadingProvider}
-              />
-              
-              {!loadingProvider && provider ? (
-                <View className='px-4 pb-4'>
+            <SectionHeader
+              title="Información de Contacto"
+              icon="card-account-details"
+              isLoading={loadingProvider}
+            />
+            
+            {!loadingProvider && provider ? (
+              <View className='px-4 pb-4'>
+                <View className='flex-row justify-between items-center py-3 border-b border-gray-100'>
+                  <Text className='text-gray-600 font-medium'>Nombre</Text>
+                  <Text className='text-gray-900 font-medium flex-1 text-right ml-4' numberOfLines={2}>
+                    {provider.props.legal_name}
+                  </Text>
+                </View>
+                
+                {provider.props.phone_number && (
                   <View className='flex-row justify-between items-center py-3 border-b border-gray-100'>
-                    <Text className='text-gray-600 font-medium'>Razón Social</Text>
-                    <Text className='text-gray-900 font-medium flex-1 text-right ml-4' numberOfLines={2}>
-                      {provider.props.legal_name}
+                    <Text className='text-gray-600 font-medium'>Teléfono</Text>
+                    <Text className='text-gray-900 font-medium flex-1 text-right ml-4' numberOfLines={1}>
+                      {provider.props.phone_number}
                     </Text>
                   </View>
-                  
-                  <View className='flex-row justify-between items-start py-3 border-b border-gray-100'>
-                    <Text className='text-gray-600 font-medium'>Dirección</Text>
-                    <Text className='text-gray-900 flex-1 text-right ml-4' numberOfLines={3}>
-                      {provider.props.tax_address}
-                    </Text>
-                  </View>
-                  
+                )}
+                
+                {provider.props.email && (
                   <View className='flex-row justify-between items-center py-3'>
-                    <Text className='text-gray-600 font-medium'>Rubro</Text>
-                    <Text className='text-gray-900 font-medium'>
-                      {provider.props.industry}
+                    <Text className='text-gray-600 font-medium'>Email</Text>
+                    <Text className='text-gray-900 font-medium flex-1 text-right ml-4' numberOfLines={1}>
+                      {provider.props.email}
                     </Text>
                   </View>
-                </View>
-              ) : loadingProvider ? (
-                <View className='px-4 pb-4'>
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <View key={index} className='flex-row justify-between items-center py-3 border-b border-gray-100'>
-                      <View className='w-24 h-4 bg-gray-300 rounded animate-pulse' />
-                      <View className='w-32 h-4 bg-gray-300 rounded animate-pulse' />
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-            </CardContainer>
+                )}
+              </View>
+            ) : loadingProvider ? (
+              <View className='px-4 pb-4'>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <View key={index} className='flex-row justify-between items-center py-3 border-b border-gray-100'>
+                    <View className='w-24 h-4 bg-gray-300 rounded animate-pulse' />
+                    <View className='w-32 h-4 bg-gray-300 rounded animate-pulse' />
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </CardContainer>
 
             <CardContainer>
               <SectionHeader
