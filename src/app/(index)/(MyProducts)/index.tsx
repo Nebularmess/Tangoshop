@@ -335,7 +335,7 @@ const FavoritesIndex = () => {
       <View style={styles.container}>
         <Header 
           title="Mis Favoritos" 
-          subtitle="Tus productos guardados ❤️"
+          subtitle="Tus productos guardados"
         >
           <SearchBar
             placeholder="Buscar en favoritos"

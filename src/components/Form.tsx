@@ -2,11 +2,11 @@
 import { COLORS } from '@/src/constants/colors';
 import React, { useState } from 'react';
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { moderateScale } from 'react-native-size-matters';
 
@@ -79,7 +79,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
               styles.toggleButtonText,
               isLoginScreen && styles.toggleButtonTextActive
             ]}>
-              Login
+              Iniciar Sesión
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -94,7 +94,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
               styles.toggleButtonText,
               isRegisterScreen && styles.toggleButtonTextActive
             ]}>
-              Register
+              Registrarse
             </Text>
           </TouchableOpacity>
         </View>
@@ -127,7 +127,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
             style={styles.forgotPasswordContainer}
             disabled={isLoading}
           >
-            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+            <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
           </TouchableOpacity>
         )}
 

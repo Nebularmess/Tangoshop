@@ -1,7 +1,6 @@
 // (auth)/register.tsx
 // (auth)/register.tsx
 import FormComponent from '@/src/components/Form';
-import CustomPopup from './CustomPopup';
 import imagePath from '@/src/constants/imagePath';
 import useAxios from '@/src/hooks/useFetch';
 import { router } from 'expo-router';
@@ -12,6 +11,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import CustomPopup from './CustomPopup';
 
 interface PopupState {
   visible: boolean;

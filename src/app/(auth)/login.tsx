@@ -104,7 +104,7 @@ const LoginScreen = () => {
         
         // FIXED: Use showPopup instead of Alert.alert
         showPopup(
-          'Login Exitoso',
+          'Inicio de Sesión Exitoso',
           `¡Bienvenido de vuelta, ${response.ok.data.name}!`,
           'success',
           () => router.replace('/(index)/(home)')
@@ -198,7 +198,7 @@ const LoginScreen = () => {
     },
     {
       key: 'password',
-      placeholder: 'Password',
+      placeholder: 'Contraseña',
       secureTextEntry: true,
     },
   ];
@@ -212,11 +212,11 @@ const LoginScreen = () => {
       >
         <SafeAreaView style={styles.safeArea}>
           <FormComponent
-            title="Welcome"
-            subtitle="Sign in to access your account"
+            title="Bienvenido a TangoShop"
+            subtitle="Inicia sesión para acceder a tu cuenta"
             fields={loginFields}
-            primaryButtonText={isSubmitting || loading ? "Iniciando sesión..." : "Sign in"}
-            secondaryButtonText="Register"
+            primaryButtonText={isSubmitting || loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+            secondaryButtonText="Registrarse"
             onPrimaryButtonPress={handleLogin}
             onSecondaryButtonPress={handleGoToRegister}
             onForgotPassword={handleForgotPassword}
