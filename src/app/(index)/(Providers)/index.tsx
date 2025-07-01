@@ -7,7 +7,7 @@ import SearchBar from '../../../components/searchBar';
 import usefetch from "../../../hooks/useFetch";
 import { getProviders } from '../../../utils/queryProv';
 
-// Interface para el proveedor del backend - EXACTAMENTE igual a la del ProviderCard
+// Interface para el proveedor del backend 
 interface Provider {
   _id: string;
   name: string;

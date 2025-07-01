@@ -14,7 +14,6 @@ import usefetch from "../../../hooks/useFetch";
 import { getProviderById } from '../../../utils/queryProv';
 import { getProductsByProvider } from '../../../utils/queryProduct';
 
-// Interface para el proveedor completo
 interface Provider {
   _id: string;
   name: string;
@@ -30,7 +29,6 @@ interface Provider {
   };
 }
 
-// Interface para productos del proveedor
 interface Product {
   _id: string;
   name: string;
@@ -46,7 +44,6 @@ interface Product {
   }];
 }
 
-// Interface para la respuesta de proveedores de la API
 interface ProvidersApiResponse {
   path: string;
   method: string;
@@ -54,7 +51,6 @@ interface ProvidersApiResponse {
   items: Provider[];
 }
 
-// Interface para la respuesta de productos de la API
 interface ProductsApiResponse {
   path: string;
   method: string;
@@ -68,26 +64,21 @@ const ProviderDetailScreen = () => {
   const [showCatalog, setShowCatalog] = useState<boolean>(false);
   const scrollViewRef = useRef<ScrollView>(null);
   
-  // Estados para filtros del catálogo
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'name' | 'price-asc' | 'price-desc'>('name');
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   
-  // Hooks para obtener datos del backend
   const { data: providers, execute: fetchProvider, loading: loadingProvider, error: providerError } = usefetch<ProvidersApiResponse>();
   const { data: products, execute: fetchProducts, loading: loadingProducts } = usefetch<ProductsApiResponse>();
 
-  // Obtener proveedor y sus productos al cargar el componente
   useEffect(() => {
     if (id) {
-      console.log('🚀 Obteniendo proveedor con ID:', id);
       fetchProvider({ 
         method: 'post', 
         url: '/api/findObjects', 
         data: getProviderById(id as string) 
       });
 
-      console.log('🛍️ Obteniendo productos del proveedor:', id);
       fetchProducts({ 
         method: 'post', 
         url: '/api/findObjects', 
@@ -96,16 +87,12 @@ const ProviderDetailScreen = () => {
     }
   }, [id]);
 
-  // Efecto para setear el proveedor cuando llegan los datos
   useEffect(() => {
-    console.log('📊 Datos recibidos:', providers);
     if (providers?.items && providers.items.length > 0) {
-      console.log('✅ Proveedor encontrado:', providers.items[0]);
       setProvider(providers.items[0]);
     }
   }, [providers]);
 
-  // Efecto para filtrar y ordenar productos
   useEffect(() => {
     if (!products?.items) {
       setFilteredProducts([]);
@@ -114,7 +101,6 @@ const ProviderDetailScreen = () => {
 
     let filtered = [...products.items];
 
-    // Filtrar por búsqueda
     if (searchQuery.trim()) {
       filtered = filtered.filter(product =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -122,7 +108,6 @@ const ProviderDetailScreen = () => {
       );
     }
 
-    // Ordenar productos
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
@@ -139,7 +124,6 @@ const ProviderDetailScreen = () => {
     setFilteredProducts(filtered);
   }, [products, searchQuery, sortBy]);
 
-  // Función para mostrar catálogo y hacer scroll al inicio
   const showCatalogView = () => {
     setShowCatalog(true);
     setTimeout(() => {
@@ -147,7 +131,6 @@ const ProviderDetailScreen = () => {
     }, 100);
   };
 
-  // Pantalla de error - SOLO si ya terminó de cargar Y hay error O no hay provider
   if (!loadingProvider && (providerError || (!provider && providers?.items?.length === 0))) {
     return (
       <SafeAreaView className='flex-1 bg-gray-100'>
@@ -168,7 +151,6 @@ const ProviderDetailScreen = () => {
         className='flex-1' 
         showsVerticalScrollIndicator={false}
       >
-        {/* Header con imagen de fondo y logo */}
         <ProviderHeader
           backgroundImage={provider?.image || ''}
           logoImage={provider?.image || ''}
@@ -178,7 +160,6 @@ const ProviderDetailScreen = () => {
         />
         
         {showCatalog ? (
-          /* ========== VISTA DE CATÁLOGO COMPLETO ========== */
           <CardContainer 
             padding="none" 
             margin="none" 
@@ -190,7 +171,6 @@ const ProviderDetailScreen = () => {
               zIndex: 1,
             }}
           >
-            {/* Información reducida del proveedor */}
             {loadingProvider ? (
               <ProviderInfo
                 name=""
@@ -235,7 +215,6 @@ const ProviderDetailScreen = () => {
               </View>
             ) : null}
 
-            {/* Componente de filtros */}
             <CatalogFilter
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
@@ -243,7 +222,6 @@ const ProviderDetailScreen = () => {
               onSortChange={setSortBy}
             />
 
-            {/* Catálogo completo de productos */}
             <View className='px-4 pb-4'>
               <Text className='text-lg font-bold text-gray-900 mb-4'>
                 {searchQuery.trim() 
@@ -283,9 +261,7 @@ const ProviderDetailScreen = () => {
             </View>
           </CardContainer>
         ) : (
-          /* ========== VISTA DE PERFIL COMPLETO ========== */
           <>
-            {/* Contenedor principal con información del proveedor */}
             <CardContainer 
               padding="none" 
               margin="none" 
@@ -297,7 +273,6 @@ const ProviderDetailScreen = () => {
                 zIndex: 1,
               }}
             >
-              {/* Información básica del proveedor */}
               <View style={{ paddingTop: 60, paddingHorizontal: 16, paddingBottom: 16 }}>
                 <ProviderInfo
                   name={provider?.name || ''}
@@ -308,7 +283,6 @@ const ProviderDetailScreen = () => {
                 />
               </View>
               
-              {/* Botones de acción */}
               <ActionButtons 
                 phone={provider?.props.phone_number}
                 email={provider?.props.email}
@@ -316,7 +290,6 @@ const ProviderDetailScreen = () => {
               />
             </CardContainer>
 
-            {/* Descripción */}
             <CardContainer>
               <DescriptionSection
                 title="Descripción"
@@ -330,7 +303,6 @@ const ProviderDetailScreen = () => {
               />
             </CardContainer>
 
-            {/* Información de contacto */}
             <CardContainer>
               <SectionHeader
                 title="Información de Contacto"
@@ -373,7 +345,6 @@ const ProviderDetailScreen = () => {
               ) : null}
             </CardContainer>
 
-            {/* Productos principales */}
             <CardContainer>
               <SectionHeader
                 title="Productos principales"
@@ -406,10 +377,7 @@ const ProviderDetailScreen = () => {
                     <TouchableOpacity
                       className='bg-blue-600 rounded-xl py-3 flex-row items-center justify-center'
                       activeOpacity={0.8}
-                      onPress={() => {
-                        console.log('Mostrar catálogo completo del proveedor:', provider?.name);
-                        showCatalogView();
-                      }}
+                      onPress={showCatalogView}
                     >
                       <MaterialCommunityIcons name="shopping" size={20} color="white" />
                       <Text className='text-white font-bold ml-2'>Ver catálogo completo</Text>
@@ -428,7 +396,6 @@ const ProviderDetailScreen = () => {
           </>
         )}
 
-        {/* Espaciado inferior */}
         <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>

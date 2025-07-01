@@ -54,7 +54,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           <ButtonSkeleton />
           <ButtonSkeleton />
         </View>
-        {/* Email button skeleton siempre visible durante loading */}
         <View className='mt-3'>
           <ButtonSkeleton isFullWidth />
         </View>
@@ -65,7 +64,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   return (
     <View className='px-4 py-3'>
       <View className='flex-row space-x-3'>
-        {/* Botón Llamar - AZUL */}
+
         <TouchableOpacity
           onPress={handleCall}
           className='flex-1 bg-blue-600 rounded-xl py-4 flex-row items-center justify-center'
@@ -75,7 +74,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           <Text className='text-white font-bold ml-2'>Llamar</Text>
         </TouchableOpacity>
 
-        {/* Botón Mensaje - AZUL (era verde) */}
         <TouchableOpacity
           onPress={handleMessage}
           className='flex-1 bg-blue-600 rounded-xl py-4 flex-row items-center justify-center'
@@ -86,7 +84,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* Botón de Email (opcional, más pequeño) */}
       {email && (
         <TouchableOpacity
           onPress={handleEmail}
