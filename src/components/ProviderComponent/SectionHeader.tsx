@@ -9,6 +9,7 @@ interface SectionHeaderProps {
   onActionPress?: () => void;
   showArrow?: boolean;
   icon?: string;
+  isLoading?: boolean;
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({
@@ -17,8 +18,44 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
   actionText,
   onActionPress,
   showArrow = false,
-  icon
+  icon,
+  isLoading = false
 }) => {
+  // Skeleton para texto
+  const TextSkeleton: React.FC<{ width?: string; height?: string }> = ({ 
+    width = 'w-full', 
+    height = 'h-4' 
+  }) => (
+    <View className={`${width} ${height} bg-gray-300 rounded animate-pulse`} />
+  );
+
+  if (isLoading) {
+    return (
+      <View className='px-4 py-3 border-b border-gray-100'>
+        <View className='flex-row items-center justify-between'>
+          <View className='flex-row items-center flex-1'>
+            {/* Icono skeleton */}
+            <View className='w-5 h-5 bg-gray-300 rounded animate-pulse mr-2' />
+            
+            {/* Título y subtítulo skeleton */}
+            <View className='flex-1'>
+              <TextSkeleton width='w-32' height='h-5' />
+              <View className='mt-1'>
+                <TextSkeleton width='w-24' height='h-3' />
+              </View>
+            </View>
+          </View>
+
+          {/* Acción skeleton */}
+          <View className='flex-row items-center'>
+            <TextSkeleton width='w-16' height='h-4' />
+            <View className='w-5 h-5 bg-gray-300 rounded animate-pulse ml-1' />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View className='px-4 py-3 border-b border-gray-100'>
       <View className='flex-row items-center justify-between'>

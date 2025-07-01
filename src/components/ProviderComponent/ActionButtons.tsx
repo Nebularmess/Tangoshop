@@ -6,13 +6,23 @@ interface ActionButtonsProps {
   phone?: string;
   email?: string;
   website?: string;
+  isLoading?: boolean;
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({
   phone,
   email,
-  website
+  website,
+  isLoading = false
 }) => {
+  // Skeleton para botones
+  const ButtonSkeleton: React.FC<{ isFullWidth?: boolean }> = ({ isFullWidth = false }) => (
+    <View className={`${isFullWidth ? 'w-full' : 'flex-1'} bg-gray-300 rounded-xl py-4 flex-row items-center justify-center animate-pulse`}>
+      <View className="w-5 h-5 bg-gray-400 rounded animate-pulse" />
+      <View className="w-16 h-4 bg-gray-400 rounded ml-2 animate-pulse" />
+    </View>
+  );
+
   const handleCall = () => {
     if (phone) {
       Linking.openURL(`tel:${phone}`);
@@ -37,10 +47,24 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
     }
   };
 
+  if (isLoading) {
+    return (
+      <View className='px-4 py-3'>
+        <View className='flex-row space-x-3'>
+          <ButtonSkeleton />
+          <ButtonSkeleton />
+        </View>
+        <View className='mt-3'>
+          <ButtonSkeleton isFullWidth />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View className='px-4 py-3'>
       <View className='flex-row space-x-3'>
-        {/* Botón Llamar - AZUL */}
+
         <TouchableOpacity
           onPress={handleCall}
           className='flex-1 bg-blue-600 rounded-xl py-4 flex-row items-center justify-center mr-1'
@@ -50,7 +74,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           <Text className='text-white font-bold ml-2'>Llamar</Text>
         </TouchableOpacity>
 
-        {/* Botón Mensaje - AZUL (era verde) */}
         <TouchableOpacity
           onPress={handleMessage}
           className='flex-1 bg-blue-600 rounded-xl py-4 flex-row items-center justify-center ml-1'
@@ -61,7 +84,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* Botón de Email (opcional, más pequeño) */}
       {email && (
         <TouchableOpacity
           onPress={handleEmail}

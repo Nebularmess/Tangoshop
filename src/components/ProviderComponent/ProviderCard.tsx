@@ -6,12 +6,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 interface Provider {
   _id: string;
   name: string;
+  description?: string; // Opcional
   image: string;
   tags: string[];
   props: {
-    legal_name: string;
-    industry: string;
-    tax_address: string;
+    legal_name?: string; // Opcional
+    cuit?: string;
+    industry?: string; // Opcional  
+    tax_address?: string; // Opcional
     phone_number?: string;
     email?: string;
   };
@@ -21,27 +23,29 @@ interface ProviderCardProps {
   provider: Provider;
   variant?: 'horizontal' | 'vertical';
   onPress?: (provider: Provider) => void;
+  isLoading?: boolean; // Nueva prop para manejar el estado de carga
 }
 
 const ProviderCard: React.FC<ProviderCardProps> = ({ 
   provider, 
   variant = 'horizontal',
-  onPress 
+  onPress,
+  isLoading = false // Por defecto no está cargando
 }) => {
   const router = useRouter();
 
   const handlePress = () => {
+    if (isLoading) return; // No permite clicks durante la carga
+    
     if (onPress) {
       onPress(provider);
     } else {
-      // Navegar a la pantalla de detalle
       router.push(`/(index)/(Providers)/${provider._id}`);
     }
   };
 
   // Función para extraer ciudad y provincia de la dirección
   const parseAddress = (address: string) => {
-    // Formato esperado: "Calle 123 - Ciudad - Provincia"
     const parts = address.split(' - ');
     if (parts.length >= 3) {
       const street = parts[0];
@@ -52,14 +56,29 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
     return { street: address, city: '', province: '' };
   };
 
-  const { street, city, province } = parseAddress(provider.props.tax_address);
+  const { street, city, province } = parseAddress(provider.props.tax_address || "");
+
+  // Componente para el skeleton/placeholder de texto
+  const TextSkeleton: React.FC<{ width?: string; height?: string }> = ({ 
+    width = 'w-full', 
+    height = 'h-3' 
+  }) => (
+    <View className={`${width} ${height} bg-gray-300 rounded animate-pulse`} />
+  );
+
+  // Componente para el skeleton/placeholder de imagen
+  const ImageSkeleton: React.FC<{ className: string }> = ({ className }) => (
+    <View className={`${className} bg-gray-300 animate-pulse flex items-center justify-center`}>
+      <MaterialCommunityIcons name="image" size={24} color="#9CA3AF" />
+    </View>
+  );
 
   if (variant === 'vertical') {
     return (
       <TouchableOpacity
         onPress={handlePress}
         className='bg-white rounded-lg mx-2 mb-3 border border-gray-200'
-        activeOpacity={0.8}
+        activeOpacity={isLoading ? 1 : 0.8} // No efecto cuando está cargando
         style={{
           shadowColor: '#000',
           shadowOffset: {
@@ -71,91 +90,134 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
           elevation: 2,
         }}
       >
-        <View className='p-4'>
-          <View className='flex-row items-start space-x-3'>
+        <View className='p-3'>
+          <View className='flex-row items-start space-x-4'>
             {/* Logo del proveedor */}
-            <Image
-              source={{ uri: provider.image }}
-              className='w-12 h-12 rounded-lg bg-gray-100'
-              resizeMode='cover'
-            />
+            {isLoading ? (
+              <ImageSkeleton className='w-24 h-24 rounded-lg mr-1.5 self-center' />
+            ) : (
+              <Image
+                source={{ uri: provider.image }}
+                className='w-24 h-24 rounded-lg bg-gray-100 mr-1.5 self-center'
+                resizeMode='cover'
+              />
+            )}
 
             {/* Información del proveedor */}
-            <View className='flex-1'>
+            <View className='flex-1 pr-2'>
               {/* Nombre del proveedor */}
-              <Text className='text-base font-bold text-gray-900 mb-1' numberOfLines={1}>
-                {provider.name}
-              </Text>
+              {isLoading ? (
+                <TextSkeleton width='w-3/4' height='h-4' />
+              ) : (
+                <Text className='text-base font-bold text-gray-900 mb-1' numberOfLines={1}>
+                  {provider.name}
+                </Text>
+              )}
               
               {/* Industria con ícono */}
-              <View className='flex-row items-center mb-2'>
-                <MaterialCommunityIcons name="briefcase" size={16} color="#2563EB" />
-                <Text className='text-sm text-blue-600 font-medium ml-2' numberOfLines={1}>
-                  {provider.props.industry}
-                </Text>
+              <View className='flex-row items-center mb-3 mt-1'>
+                {isLoading ? (
+                  <>
+                    <View className='w-3.5 h-3.5 bg-gray-300 rounded animate-pulse' />
+                    <TextSkeleton width='w-1/2' height='h-3' />
+                  </>
+                ) : (
+                  <>
+                    <MaterialCommunityIcons name="briefcase" size={14} color="#2563EB" />
+                    <Text className='text-sm text-blue-600 font-medium ml-2' numberOfLines={1}>
+                      {provider.props.industry || 'Sin industria'}
+                    </Text>
+                  </>
+                )}
               </View>
-              
-              {/* Dirección (solo calle) con ícono - removido porque ahora va abajo */}
-              {/* <View className='flex-row items-start mb-2'>
-                <MaterialCommunityIcons name="map-marker" size={16} color="#6B7280" />
-                <Text className='text-sm text-gray-600 ml-2 flex-1' numberOfLines={1}>
-                  {street}
-                </Text>
-              </View> */}
 
-              {/* Fila de información adicional */}
-              <View className='flex-row justify-between items-start'>
-                {/* Columna izquierda: Teléfono y Email */}
-                <View className='flex-1 mr-2'>
-                  {/* Teléfono */}
-                  {provider.props.phone_number && (
-                    <View className='flex-row items-center mb-1'>
-                      <MaterialCommunityIcons name="phone" size={14} color="#6B7280" />
-                      <Text className='text-xs text-gray-600 ml-1 flex-1' numberOfLines={1}>
-                        {provider.props.phone_number}
-                      </Text>
-                    </View>
+              {/* Información de contacto y ubicación */}
+              <View className='space-y-1.5'>
+                {/* Teléfono */}
+                <View className='flex-row items-center'>
+                  {isLoading ? (
+                    <>
+                      <View className='w-3 h-3 bg-gray-300 rounded animate-pulse' />
+                      <TextSkeleton width='w-2/3' height='h-3' />
+                    </>
+                  ) : (
+                    provider.props.phone_number && (
+                      <>
+                        <MaterialCommunityIcons name="phone" size={12} color="#6B7280" />
+                        <Text className='text-xs text-gray-600 ml-2 flex-1' numberOfLines={1}>
+                          {provider.props.phone_number}
+                        </Text>
+                      </>
+                    )
                   )}
-                  
-                  {/* Email - sin numberOfLines para mostrar completo */}
-                  {provider.props.email && (
-                    <View className='flex-row items-start'>
-                      <MaterialCommunityIcons name="email" size={14} color="#6B7280" style={{ marginTop: 1 }} />
-                      <Text className='text-xs text-gray-600 ml-1 flex-1'>
-                        {provider.props.email}
-                      </Text>
-                    </View>
+                </View>
+                
+                {/* Email */}
+                <View className='flex-row items-center'>
+                  {isLoading ? (
+                    <>
+                      <View className='w-3 h-3 bg-gray-300 rounded animate-pulse' />
+                      <TextSkeleton width='w-3/4' height='h-3' />
+                    </>
+                  ) : (
+                    provider.props.email && (
+                      <>
+                        <MaterialCommunityIcons name="email" size={12} color="#6B7280" />
+                        <Text className='text-xs text-gray-600 ml-2 flex-1' numberOfLines={1}>
+                          {provider.props.email}
+                        </Text>
+                      </>
+                    )
                   )}
                 </View>
 
-                {/* Columna derecha: Ciudad-Provincia y Dirección */}
-                <View className='flex-1 items-end'>
-                  {/* Ciudad y Provincia juntos */}
-                  {(city || province) && (
-                    <View className='flex-row items-center mb-1'>
-                      <MaterialCommunityIcons name="map-marker" size={14} color="#6B7280" />
-                      <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
-                        {city}{city && province ? ', ' : ''}{province}
-                      </Text>
-                    </View>
+                {/* Ciudad y Provincia */}
+                <View className='flex-row items-center'>
+                  {isLoading ? (
+                    <>
+                      <View className='w-3 h-3 bg-gray-300 rounded animate-pulse' />
+                      <TextSkeleton width='w-1/2' height='h-3' />
+                    </>
+                  ) : (
+                    (city || province) && (
+                      <>
+                        <MaterialCommunityIcons name="map-marker" size={12} color="#6B7280" />
+                        <Text className='text-xs text-gray-600 ml-2 flex-1' numberOfLines={1}>
+                          {city}{city && province ? ', ' : ''}{province}
+                        </Text>
+                      </>
+                    )
                   )}
-                  
-                  {/* Dirección (calle) */}
-                  {street && (
-                    <View className='flex-row items-center'>
-                      <MaterialCommunityIcons name="home" size={14} color="#6B7280" />
-                      <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
-                        {street}
-                      </Text>
-                    </View>
+                </View>
+
+                {/* Dirección (calle) */}
+                <View className='flex-row items-center'>
+                  {isLoading ? (
+                    <>
+                      <View className='w-3 h-3 bg-gray-300 rounded animate-pulse' />
+                      <TextSkeleton width='w-4/5' height='h-3' />
+                    </>
+                  ) : (
+                    street && (
+                      <>
+                        <MaterialCommunityIcons name="home" size={12} color="#6B7280" />
+                        <Text className='text-xs text-gray-600 ml-2 flex-1' numberOfLines={1}>
+                          {street}
+                        </Text>
+                      </>
+                    )
                   )}
                 </View>
               </View>
             </View>
 
             {/* Flecha de navegación */}
-            <View className='self-center ml-2'>
-              <MaterialCommunityIcons name="chevron-right" size={20} color="#9CA3AF" />
+            <View className='self-center'>
+              {isLoading ? (
+                <View className='w-4 h-4 bg-gray-300 rounded animate-pulse' />
+              ) : (
+                <MaterialCommunityIcons name="chevron-right" size={18} color="#9CA3AF" />
+              )}
             </View>
           </View>
         </View>
@@ -169,102 +231,152 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
       onPress={handlePress}
       className='bg-white rounded-xl mr-3 border border-gray-100 shadow-sm overflow-hidden'
       style={{ width: 280 }}
-      activeOpacity={0.8}
+      activeOpacity={isLoading ? 1 : 0.8}
     >
       {/* Header con imagen */}
       <View className='relative'>
-        <Image
-          source={{ uri: provider.image }}
-          className='w-full h-32 bg-gray-100'
-          resizeMode='cover'
-        />
-        {/* Overlay gradient */}
-        <View className='absolute inset-0 bg-gradient-to-t from-black/20 to-transparent' />
+        {isLoading ? (
+          <ImageSkeleton className='w-full h-40' />
+        ) : (
+          <Image
+            source={{ uri: provider.image }}
+            className='w-full h-40 bg-gray-100'
+            resizeMode='cover'
+          />
+        )}
         
-        {/* Badge de comercio */}
-        <View className='absolute top-2 right-2 bg-white/90 rounded-full px-2 py-1 flex-row items-center'>
-          <MaterialCommunityIcons name="store" size={12} color="#2563EB" />
-          <Text className='text-xs font-medium text-blue-600 ml-1'>Comercio</Text>
-        </View>
+        {/* Overlay gradient y badge - solo si no está cargando */}
+        {!isLoading && (
+          <>
+            <View className='absolute inset-0 bg-gradient-to-t from-black/20 to-transparent' />
+            <View className='absolute top-2 right-2 bg-white/90 rounded-full px-2 py-1 flex-row items-center'>
+              <MaterialCommunityIcons name="store" size={12} color="#2563EB" />
+              <Text className='text-xs font-medium text-blue-600 ml-1'>Comercio</Text>
+            </View>
+          </>
+        )}
+
+        {/* Badge skeleton cuando está cargando */}
+        {isLoading && (
+          <View className='absolute top-2 right-2 bg-gray-300 rounded-full px-2 py-1 animate-pulse'>
+            <TextSkeleton width='w-12' height='h-3' />
+          </View>
+        )}
       </View>
 
       {/* Contenido */}
-      <View className='p-4'>
+      <View className='p-3'>
         {/* Nombre */}
-        <Text className='text-lg font-bold text-gray-900 mb-2' numberOfLines={1}>
-          {provider.name}
-        </Text>
+        {isLoading ? (
+          <TextSkeleton width='w-3/4' height='h-5' />
+        ) : (
+          <Text className='text-lg font-bold text-gray-900 mb-2' numberOfLines={1}>
+            {provider.name}
+          </Text>
+        )}
         
         {/* Industria */}
-        <View className='flex-row items-center mb-3'>
-          <View className='bg-blue-100 px-3 py-1 rounded-full flex-row items-center'>
-            <MaterialCommunityIcons name="briefcase-outline" size={12} color="#2563EB" />
-            <Text className='text-xs font-medium text-blue-700 ml-1' numberOfLines={1}>
-              {provider.props.industry}
-            </Text>
-          </View>
+        <View className='flex-row items-center mb-2 mt-2'>
+          {isLoading ? (
+            <View className='bg-gray-300 px-2 py-1 rounded-full animate-pulse'>
+              <TextSkeleton width='w-16' height='h-3' />
+            </View>
+          ) : (
+            <View className='bg-blue-100 px-2 py-1 rounded-full flex-row items-center'>
+              <MaterialCommunityIcons name="briefcase-outline" size={12} color="#2563EB" />
+              <Text className='text-xs font-medium text-blue-700 ml-1' numberOfLines={1}>
+                {provider.props.industry || 'Sin industria'}
+              </Text>
+            </View>
+          )}
         </View>
-        
-        {/* Dirección (solo calle) - removido porque ahora va en la columna derecha */}
-        {/* <View className='flex-row items-start mb-3'>
-          <MaterialCommunityIcons name="map-marker-outline" size={14} color="#6B7280" />
-          <Text className='text-sm text-gray-600 ml-1 flex-1 leading-5' numberOfLines={1}>
-            {street}
-          </Text>
-        </View> */}
 
         {/* Información de contacto y ubicación */}
-        <View className='flex-row justify-between items-start mb-3'>
-          {/* Columna izquierda: Contacto */}
-          <View className='flex-1 mr-2'>
-            {/* Teléfono */}
-            {provider.props.phone_number && (
-              <View className='flex-row items-center mb-1'>
-                <MaterialCommunityIcons name="phone" size={12} color="#6B7280" />
-                <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
-                  {provider.props.phone_number}
-                </Text>
-              </View>
+        <View className='space-y-1 mb-2'>
+          {/* Teléfono */}
+          <View className='flex-row items-center'>
+            {isLoading ? (
+              <>
+                <View className='w-2.5 h-2.5 bg-gray-300 rounded animate-pulse' />
+                <TextSkeleton width='w-2/3' height='h-3' />
+              </>
+            ) : (
+              provider.props.phone_number && (
+                <>
+                  <MaterialCommunityIcons name="phone" size={10} color="#6B7280" />
+                  <Text className='text-xs text-gray-600 ml-1 flex-1' numberOfLines={1}>
+                    {provider.props.phone_number}
+                  </Text>
+                </>
+              )
             )}
-            
-            {/* Email - sin numberOfLines */}
-            {provider.props.email && (
-              <View className='flex-row items-start'>
-                <MaterialCommunityIcons name="email" size={12} color="#6B7280" style={{ marginTop: 1 }} />
-                <Text className='text-xs text-gray-600 ml-1'>
-                  {provider.props.email}
-                </Text>
-              </View>
+          </View>
+          
+          {/* Email */}
+          <View className='flex-row items-center'>
+            {isLoading ? (
+              <>
+                <View className='w-2.5 h-2.5 bg-gray-300 rounded animate-pulse' />
+                <TextSkeleton width='w-3/4' height='h-3' />
+              </>
+            ) : (
+              provider.props.email && (
+                <>
+                  <MaterialCommunityIcons name="email" size={10} color="#6B7280" />
+                  <Text className='text-xs text-gray-600 ml-1 flex-1' numberOfLines={1}>
+                    {provider.props.email}
+                  </Text>
+                </>
+              )
             )}
           </View>
 
-          {/* Columna derecha: Ubicación */}
-          <View className='flex-1 items-end'>
-            {/* Ciudad y Provincia juntos */}
-            {(city || province) && (
-              <View className='flex-row items-center mb-1'>
-                <MaterialCommunityIcons name="map-marker" size={12} color="#6B7280" />
-                <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
-                  {city}{city && province ? ', ' : ''}{province}
-                </Text>
-              </View>
+          {/* Ciudad y Provincia */}
+          <View className='flex-row items-center'>
+            {isLoading ? (
+              <>
+                <View className='w-2.5 h-2.5 bg-gray-300 rounded animate-pulse' />
+                <TextSkeleton width='w-1/2' height='h-3' />
+              </>
+            ) : (
+              (city || province) && (
+                <>
+                  <MaterialCommunityIcons name="map-marker" size={10} color="#6B7280" />
+                  <Text className='text-xs text-gray-600 ml-1 flex-1' numberOfLines={1}>
+                    {city}{city && province ? ', ' : ''}{province}
+                  </Text>
+                </>
+              )
             )}
-            
-            {/* Dirección (calle) */}
-            {street && (
-              <View className='flex-row items-center'>
-                <MaterialCommunityIcons name="home" size={12} color="#6B7280" />
-                <Text className='text-xs text-gray-600 ml-1' numberOfLines={1}>
-                  {street}
-                </Text>
-              </View>
+          </View>
+
+          {/* Dirección (calle) */}
+          <View className='flex-row items-center'>
+            {isLoading ? (
+              <>
+                <View className='w-2.5 h-2.5 bg-gray-300 rounded animate-pulse' />
+                <TextSkeleton width='w-4/5' height='h-3' />
+              </>
+            ) : (
+              street && (
+                <>
+                  <MaterialCommunityIcons name="home" size={10} color="#6B7280" />
+                  <Text className='text-xs text-gray-600 ml-1 flex-1' numberOfLines={1}>
+                    {street}
+                  </Text>
+                </>
+              )
             )}
           </View>
         </View>
 
-        {/* Footer simple */}
-        <View className='flex-row items-center justify-end border-t border-gray-100 pt-3'>
-          <MaterialCommunityIcons name="chevron-right" size={16} color="#9CA3AF" />
+        {/* Footer */}
+        <View className='flex-row items-center justify-end border-t border-gray-100 pt-2'>
+          {isLoading ? (
+            <View className='w-3.5 h-3.5 bg-gray-300 rounded animate-pulse' />
+          ) : (
+            <MaterialCommunityIcons name="chevron-right" size={14} color="#9CA3AF" />
+          )}
         </View>
       </View>
     </TouchableOpacity>

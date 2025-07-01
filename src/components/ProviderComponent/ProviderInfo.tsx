@@ -7,14 +7,58 @@ interface ProviderInfoProps {
   industry: string;
   address: string;
   tags?: string[];
+  isLoading?: boolean;
 }
 
 const ProviderInfo: React.FC<ProviderInfoProps> = ({
   name,
   industry,
   address,
-  tags = []
+  tags = [],
+  isLoading = false
 }) => {
+  // Skeleton para texto
+  const TextSkeleton: React.FC<{ width?: string; height?: string }> = ({ 
+    width = 'w-full', 
+    height = 'h-4' 
+  }) => (
+    <View className={`${width} ${height} bg-gray-300 rounded animate-pulse`} />
+  );
+
+  if (isLoading) {
+    return (
+      <View className='items-center pt-6 pb-4'>
+        {/* Nombre del proveedor skeleton */}
+        <View className='items-center mb-2'>
+          <TextSkeleton width='w-48' height='h-6' />
+        </View>
+        
+        {/* Industria skeleton */}
+        <View className='flex-row items-center mb-3'>
+          <View className='w-4 h-4 bg-gray-300 rounded animate-pulse' />
+          <TextSkeleton width='w-32' height='h-4' />
+        </View>
+        
+        {/* Dirección skeleton */}
+        <View className='flex-row items-start mb-4 px-4'>
+          <View className='w-4 h-4 bg-gray-300 rounded animate-pulse' />
+          <View className='ml-2 flex-1 items-center'>
+            <TextSkeleton width='w-40' height='h-4' />
+          </View>
+        </View>
+        
+        {/* Tags skeleton */}
+        <View className='flex-row flex-wrap justify-center px-4'>
+          {Array.from({ length: 3 }).map((_, index) => (
+            <View key={index} className='bg-gray-200 px-3 py-1 rounded-full m-1 animate-pulse'>
+              <TextSkeleton width='w-12' height='h-3' />
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View className='items-center pt-6 pb-4'>
       {/* Nombre del proveedor */}
