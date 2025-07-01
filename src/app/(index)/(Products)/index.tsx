@@ -2,11 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import ProductCard from '../(home)/components/ProductCard';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
 import FilterPopup from '../../../components/products/FilterPopUp';
-//import ProductCard from '../../../components/products/ProductCard';
-import ProductCard from '../(home)/components/ProductCard';
 import SearchBar from '../../../components/products/productsSearchBar';
 import usefetch from "../../../hooks/useFetch";
 import {

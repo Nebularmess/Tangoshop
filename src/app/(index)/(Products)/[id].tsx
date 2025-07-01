@@ -4,7 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
+  Modal,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -50,7 +52,8 @@ interface ProductApiResponse {
   items: BackendProduct[];
 }
 
-// Componente para las estrellas de calificación
+// Obtener dimensiones de la pantalla
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const StarRating: React.FC<{ rating: number; maxStars?: number }> = ({ rating, maxStars = 5 }) => {
     return (
         <View style={styles.starsContainer}>
@@ -58,7 +61,7 @@ const StarRating: React.FC<{ rating: number; maxStars?: number }> = ({ rating, m
                 <Ionicons
                     key={index}
                     name={index < rating ? "star" : "star-outline"}
-                    size={24}
+                    size={20}
                     color={index < rating ? "#2563EB" : "#D1D5DB"}
                     style={styles.star}
                 />
@@ -75,6 +78,8 @@ export default function ProductoDetalle() {
   const [producto, setProducto] = useState<BackendProduct | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  const [isImageModalVisible, setIsImageModalVisible] = useState<boolean>(false);
 
   // Hook para obtener datos del backend
   const { data: productData, execute: fetchProduct, loading: loadingProduct } = usefetch<ProductApiResponse>();
@@ -177,6 +182,32 @@ export default function ProductoDetalle() {
     }
   };
 
+  // Funciones para el modal de imágenes
+  const openImageModal = (index: number) => {
+    setSelectedImageIndex(index);
+    setIsImageModalVisible(true);
+  };
+
+  const closeImageModal = () => {
+    setIsImageModalVisible(false);
+    setSelectedImageIndex(null);
+  };
+
+  const navigateImage = (direction: 'prev' | 'next') => {
+    if (!producto?.props?.images || selectedImageIndex === null) return;
+    
+    const totalImages = producto.props.images.length;
+    let newIndex = selectedImageIndex;
+    
+    if (direction === 'next') {
+      newIndex = (selectedImageIndex + 1) % totalImages;
+    } else {
+      newIndex = selectedImageIndex === 0 ? totalImages - 1 : selectedImageIndex - 1;
+    }
+    
+    setSelectedImageIndex(newIndex);
+  };
+
   // Determinar si está en favoritos
   const isFavorite = producto?.saved_product && producto.saved_product.length > 0;
 
@@ -215,14 +246,6 @@ export default function ProductoDetalle() {
   if (loadingProduct || !userId) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
         <LoadingComponent />
       </SafeAreaView>
     );
@@ -232,14 +255,6 @@ export default function ProductoDetalle() {
   if (error || !producto) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
         <ErrorComponent />
       </SafeAreaView>
     );
@@ -247,129 +262,248 @@ export default function ProductoDetalle() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
+      <StatusBar barStyle="light-content" backgroundColor="#2563EB" />
       
-      {/* Header con botón de regreso */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.favoriteButton}
-          onPress={handleToggleFavorite}
-        >
-          <Ionicons 
-            name={isFavorite ? "heart" : "heart-outline"} 
-            size={24} 
-            color={isFavorite ? "#FF4444" : "white"} 
-          />
-        </TouchableOpacity>
-      </View>
-
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Contenedor principal del producto */}
-        <View style={styles.productCard}>
-          {/* Imagen del producto */}
-          <View style={styles.imageContainer}>
-            <Image
-              source={{ 
-                uri: getImageUri() || 'https://via.placeholder.com/200x300/F3F4F6/6B7280?text=Producto'
-              }}
-              style={styles.productImage}
-              resizeMode="contain"
-            />
+        {/* Header con imagen de fondo - similar al de proveedores */}
+        <View style={styles.headerContainer}>
+          <Image
+            source={{ 
+              uri: getImageUri() || 'https://via.placeholder.com/400x250/2563EB/ffffff?text=Producto'
+            }}
+            style={styles.headerImage}
+            resizeMode="cover"
+          />
+          <View style={styles.headerOverlay} />
+          
+          {/* Botones de navegación */}
+          <View style={styles.headerButtons}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.favoriteButton}
+              onPress={handleToggleFavorite}
+            >
+              <Ionicons 
+                name={isFavorite ? "heart" : "heart-outline"} 
+                size={24} 
+                color={isFavorite ? "#FF4444" : "white"} 
+              />
+            </TouchableOpacity>
           </View>
 
-          {/* Información del producto */}
-          <View style={styles.productInfo}>
+          {/* Logo/Imagen circular del producto */}
+          <TouchableOpacity 
+            style={styles.logoContainer}
+            onPress={() => {
+              console.log('🖼️ Tocando logo del producto');
+              openImageModal(0);
+            }}
+            activeOpacity={0.8}
+          >
+            <Image
+              source={{ 
+                uri: getImageUri() || 'https://via.placeholder.com/100x100/F3F4F6/6B7280?text=P'
+              }}
+              style={styles.logoImage}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Contenedor principal con bordes redondeados */}
+        <View style={styles.mainContainer}>
+          {/* Información básica del producto */}
+          <View style={styles.productInfoContainer}>
             <Text style={styles.productTitle}>{producto.name}</Text>
             
+            {/* Precio */}
+            <View style={styles.priceContainer}>
+              <Ionicons name="cash-outline" size={20} color="#2563EB" />
+              <Text style={styles.price}>
+                {formatPrice(producto.props?.price || 0)}
+              </Text>
+            </View>
+
+            {/* Categoría */}
+            <View style={styles.categoryContainer}>
+              <Ionicons name="pricetag-outline" size={16} color="#2563EB" />
+              <Text style={styles.categoryText}>{producto.categorie}</Text>
+            </View>
+
             {/* Calificación */}
             <View style={styles.ratingContainer}>
               <StarRating rating={Math.round(getRating())} />
               <Text style={styles.ratingText}>{getRating().toFixed(1)}</Text>
             </View>
 
-            {/* Precio */}
-            <Text style={styles.price}>
-              {formatPrice(producto.props?.price || 0)}
-            </Text>
-
-            {/* Categoría */}
-            <View style={styles.categoryContainer}>
-              <Ionicons name="pricetag-outline" size={16} color="#6B7280" />
-              <Text style={styles.categoryText}>{producto.categorie}</Text>
-            </View>
-
             {/* Tags si los hay */}
             {producto.tags && producto.tags.length > 0 && (
               <View style={styles.tagsContainer}>
-                <Text style={styles.tagsTitle}>Etiquetas:</Text>
-                <View style={styles.tagsRow}>
-                  {producto.tags.map((tag, index) => (
-                    <View key={index} style={styles.tag}>
-                      <Text style={styles.tagText}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
+                {producto.tags.slice(0, 4).map((tag, index) => (
+                  <View key={index} style={styles.tag}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </View>
+                ))}
               </View>
             )}
-
-            {/* Botón de catálogo completo */}
-            <TouchableOpacity style={styles.catalogButton}>
-              <Text style={styles.catalogButtonText}>Catálogo completo</Text>
-              <Ionicons name="create-outline" size={20} color="white" style={styles.catalogIcon} />
-            </TouchableOpacity>
           </View>
         </View>
 
         {/* Descripción del producto */}
         {producto.description && (
-          <View style={styles.descriptionContainer}>
-            <Text style={styles.descriptionTitle}>Descripción</Text>
-            <Text style={styles.descriptionText}>{producto.description}</Text>
+          <View style={styles.cardContainer}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="document-text-outline" size={20} color="#2563EB" />
+              <Text style={styles.sectionTitle}>Descripción</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              <Text style={styles.descriptionText}>{producto.description}</Text>
+            </View>
           </View>
         )}
 
         {/* Imágenes adicionales si las hay */}
         {producto.props?.images && producto.props.images.length > 1 && (
-          <View style={styles.additionalImagesContainer}>
-            <Text style={styles.additionalImagesTitle}>Más imágenes</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.additionalImagesScroll}>
-              {producto.props.images.slice(1).map((imageUri, index) => (
-                <Image
-                  key={index}
-                  source={{ uri: imageUri }}
-                  style={styles.additionalImage}
-                  resizeMode="cover"
-                />
-              ))}
-            </ScrollView>
+          <View style={styles.cardContainer}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="images-outline" size={20} color="#2563EB" />
+              <Text style={styles.sectionTitle}>Más imágenes</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesScrollView}>
+                {producto.props.images.slice(1).map((imageUri, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => {
+                      console.log('🖼️ Tocando imagen adicional, índice:', index + 1);
+                      openImageModal(index + 1);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Image
+                      source={{ uri: imageUri }}
+                      style={styles.additionalImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
           </View>
         )}
 
         {/* Información adicional */}
-        <View style={styles.additionalInfoContainer}>
-          <Text style={styles.additionalInfoTitle}>Información adicional</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Categoría:</Text>
-            <Text style={styles.infoValue}>{producto.categorie}</Text>
+        <View style={styles.cardContainer}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="information-circle-outline" size={20} color="#2563EB" />
+            <Text style={styles.sectionTitle}>Información adicional</Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>ID del producto:</Text>
-            <Text style={styles.infoValue}>{producto._id}</Text>
-          </View>
-          {producto.published && (
+          <View style={styles.sectionContent}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Fecha de publicación:</Text>
-              <Text style={styles.infoValue}>{formatPublishedDate(producto.published)}</Text>
+              <Text style={styles.infoLabel}>Categoría:</Text>
+              <Text style={styles.infoValue}>{producto.categorie}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>ID del producto:</Text>
+              <Text style={styles.infoValue} numberOfLines={2}>{producto._id}</Text>
+            </View>
+            {producto.published && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Fecha de publicación:</Text>
+                <Text style={styles.infoValue}>{formatPublishedDate(producto.published)}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Espaciado inferior */}
+        <View style={{ height: 20 }} />
+      </ScrollView>
+
+      {/* Modal para mostrar imágenes en grande */}
+      <Modal
+        visible={isImageModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeImageModal}
+      >
+        <View style={styles.modalOverlay}>
+          <StatusBar barStyle="light-content" backgroundColor="rgba(0, 0, 0, 0.9)" />
+          
+          {/* Header del modal */}
+          <View style={styles.modalHeader}>
+            <TouchableOpacity 
+              style={styles.modalCloseButton}
+              onPress={closeImageModal}
+            >
+              <Ionicons name="close" size={28} color="white" />
+            </TouchableOpacity>
+            
+            {producto?.props?.images && (
+              <Text style={styles.modalImageCounter}>
+                {(selectedImageIndex || 0) + 1} de {producto.props.images.length}
+              </Text>
+            )}
+          </View>
+
+          {/* Contenedor de la imagen */}
+          <View style={styles.modalImageContainer}>
+            {producto?.props?.images && selectedImageIndex !== null && (
+              <TouchableOpacity
+                style={styles.modalImageWrapper}
+                activeOpacity={1}
+                onPress={() => {/* Evitar cerrar al tocar la imagen */}}
+              >
+                <Image
+                  source={{ uri: producto.props.images[selectedImageIndex] }}
+                  style={styles.modalImage}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            )}
+
+            {/* Botones de navegación si hay más de una imagen */}
+            {producto?.props?.images && producto.props.images.length > 1 && (
+              <>
+                <TouchableOpacity
+                  style={[styles.modalNavButton, styles.modalNavButtonLeft]}
+                  onPress={() => navigateImage('prev')}
+                >
+                  <Ionicons name="chevron-back" size={32} color="white" />
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.modalNavButton, styles.modalNavButtonRight]}
+                  onPress={() => navigateImage('next')}
+                >
+                  <Ionicons name="chevron-forward" size={32} color="white" />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+
+          {/* Indicadores de imagen si hay más de una */}
+          {producto?.props?.images && producto.props.images.length > 1 && (
+            <View style={styles.modalIndicators}>
+              {producto.props.images.map((_, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.modalIndicator,
+                    selectedImageIndex === index && styles.modalIndicatorActive
+                  ]}
+                  onPress={() => setSelectedImageIndex(index)}
+                />
+              ))}
             </View>
           )}
         </View>
-      </ScrollView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -377,21 +511,10 @@ export default function ProductoDetalle() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F3F4F6',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#1E40AF',
-  },
-  backButton: {
-    padding: 8,
-  },
-  favoriteButton: {
-    padding: 8,
+  scrollView: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -435,13 +558,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  scrollView: {
-    flex: 1,
+  // Nuevos estilos siguiendo el patrón del proveedor
+  headerContainer: {
+    height: 250,
+    position: 'relative',
   },
-  productCard: {
+  headerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  headerButtons: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    zIndex: 2,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  favoriteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoContainer: {
+    position: 'absolute',
+    bottom: -30,
+    alignSelf: 'center',
+    zIndex: 2,
+  },
+  logoImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 4,
+    borderColor: 'white',
+  },
+  mainContainer: {
     backgroundColor: 'white',
-    margin: 16,
-    borderRadius: 16,
+    marginTop: -20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 50,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -450,22 +630,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    overflow: 'hidden',
   },
-  imageContainer: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 32,
-    paddingHorizontal: 16,
+  productInfoContainer: {
     alignItems: 'center',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  productImage: {
-    width: 200,
-    height: 200,
-  },
-  productInfo: {
-    padding: 20,
   },
   productTitle: {
     fontSize: 24,
@@ -473,6 +640,30 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 12,
     textAlign: 'center',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  price: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2563EB',
+    marginLeft: 8,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  categoryText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#2563EB',
+    fontWeight: '500',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -484,7 +675,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   star: {
-    marginHorizontal: 2,
+    marginHorizontal: 1,
   },
   ratingText: {
     marginLeft: 8,
@@ -492,75 +683,28 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '600',
   },
-  price: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  categoryContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  categoryText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
   tagsContainer: {
-    marginBottom: 24,
-  },
-  tagsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 8,
-  },
-  tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: 8,
+    marginTop: 8,
   },
   tag: {
-    backgroundColor: '#EBF4FF',
+    backgroundColor: '#F3F4F6',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#2563EB',
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   tagText: {
-    color: '#2563EB',
+    color: '#6B7280',
     fontSize: 12,
     fontWeight: '500',
   },
-  catalogButton: {
-    backgroundColor: '#2563EB',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  catalogButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  catalogIcon: {
-    marginLeft: 4,
-  },
-  descriptionContainer: {
+  cardContainer: {
     backgroundColor: 'white',
-    margin: 16,
-    marginTop: 0,
-    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 16,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: {
@@ -571,39 +715,29 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  descriptionTitle: {
-    fontSize: 20,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#1F2937',
-    marginBottom: 12,
+    marginLeft: 8,
+  },
+  sectionContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   descriptionText: {
     fontSize: 16,
     lineHeight: 24,
     color: '#6B7280',
   },
-  additionalImagesContainer: {
-    backgroundColor: 'white',
-    margin: 16,
-    marginTop: 0,
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  additionalImagesTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 12,
-  },
-  additionalImagesScroll: {
+  imagesScrollView: {
     flexDirection: 'row',
   },
   additionalImage: {
@@ -612,41 +746,115 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 12,
   },
-  additionalInfoContainer: {
-    backgroundColor: 'white',
-    margin: 16,
-    marginTop: 0,
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  additionalInfoTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 12,
-  },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   infoLabel: {
     fontSize: 16,
     color: '#6B7280',
     fontWeight: '500',
+    flex: 1,
   },
   infoValue: {
     fontSize: 16,
     color: '#1F2937',
     fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: 16,
+  },
+  // Estilos para el modal de imágenes
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalHeader: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 2,
+  },
+  modalCloseButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImageCounter: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  modalImageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  modalImageWrapper: {
+    width: screenWidth,
+    height: screenHeight * 0.7,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImage: {
+    width: '90%',
+    height: '90%',
+  },
+  modalNavButton: {
+    position: 'absolute',
+    top: '50%',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: -25,
+  },
+  modalNavButtonLeft: {
+    left: 20,
+  },
+  modalNavButtonRight: {
+    right: 20,
+  },
+  modalIndicators: {
+    position: 'absolute',
+    bottom: 50,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  modalIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    marginHorizontal: 4,
+  },
+  modalIndicatorActive: {
+    backgroundColor: 'white',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });

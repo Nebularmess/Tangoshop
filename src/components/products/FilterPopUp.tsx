@@ -231,7 +231,7 @@ const FilterPopup: React.FC<FilterPopupProps> = ({
             {/* Categorías */}
             {renderFilterSection(
               'Categorías',
-              ['Producto Deportivo', 'Ropa e indumentaria', 'Tecnologia'],
+              ['Producto Deportivo', 'Ropa e indumentaria', 'Tecnología'],
               selectedFilters.categories || [],
               toggleCategory
             )}
