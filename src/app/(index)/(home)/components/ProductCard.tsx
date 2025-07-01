@@ -1,6 +1,7 @@
 import useFetch from '@/src/hooks/useFetch';
 import useStore from '@/src/hooks/useStorage';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 
@@ -28,6 +29,7 @@ interface ResApi {
 }
 
 const ProductCard: React.FC<{ product: ProductCardProps['product'] }> = ({ product }) => {
+    const router = useRouter();
     const { get } = useStore();
     const currentUser = get().currentUser;
     const { execute, error } = useFetch<ResApi>();
@@ -74,8 +76,12 @@ const ProductCard: React.FC<{ product: ProductCardProps['product'] }> = ({ produ
         }
     };
 
+    const navigateTo = () => {
+        router.push(`/(index)/(Products)/${product._id}`); //products/
+    };
+
     return (
-        <View className="flex-row bg-white rounded-xl p-2 m-2 shadow-lg">
+        <TouchableOpacity className="flex-row bg-white rounded-xl p-2 m-2 shadow-lg" onPress={navigateTo}>
             {/* Imagen */}
             <Image
                 source={
@@ -112,7 +118,7 @@ const ProductCard: React.FC<{ product: ProductCardProps['product'] }> = ({ produ
                     color="black"
                 />
             </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
     );
 };
 

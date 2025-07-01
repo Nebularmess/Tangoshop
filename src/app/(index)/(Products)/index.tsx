@@ -1,137 +1,193 @@
-import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
-import FilterPopup from '../../../components/products/FilterPopUp'; // Importa el nuevo componente
-import ProductCard from '../../../components/products/ProductCard';
+import FilterPopup from '../../../components/products/FilterPopUp';
+//import ProductCard from '../../../components/products/ProductCard';
+import ProductCard from '../(home)/components/ProductCard';
 import SearchBar from '../../../components/products/productsSearchBar';
-import { productosEjemplo } from '../../../utils/scripts';
+import usefetch from "../../../hooks/useFetch";
+import {
+  getFilteredProductsWithFavorites,
+  getProductsWithFavorites,
+  ProductFilters,
+  searchFilteredProductsWithFavorites,
+  searchProductsWithFavorites
+} from '../../../utils/queryProduct';
 
-interface Producto {
-  id: number;
-  imageUri: string;
+// Interface para el producto del backend (nueva estructura)
+interface BackendProduct {
+  _id: string;
   name: string;
-  rating: number;
-  category: string;
-  subcategory: string;
   description: string;
-  price: number;
-  favorite: boolean;
+  categorie: string;
+  type: string;
+  tags: string[];
+  props: {
+    price: number;
+    images: string[];
+  };
+  saved_product: { _id: string }[];
+}
+
+// Interface para la respuesta de la API
+interface ProductsApiResponse {
+  path: string;
+  method: string;
+  error?: any;
+  items: BackendProduct[];
 }
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [productos, setProductos] = useState<Producto[]>(productosEjemplo);
-  const [productosFiltrados, setProductosFiltrados] = useState<Producto[]>(productos);
-  const [activeScreen] = useState(true);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [productos, setProductos] = useState<BackendProduct[]>([]);
+  const [productosFiltrados, setProductosFiltrados] = useState<BackendProduct[]>([]);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  
-  // Nuevo estado para controlar el popup de filtros
   const [isFilterPopupVisible, setIsFilterPopupVisible] = useState<boolean>(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [activeFilters, setActiveFilters] = useState<ProductFilters>({});
 
-  // Efecto para filtrar productos cuando cambia la búsqueda
+  // Obtener parámetros de navegación (para filtro por type)
+  const params = useLocalSearchParams();
+  const categoryType = params.type as string; // Parámetro de tipo de categoría
+
+  // Hook para obtener datos del backend
+  const { data: products, execute: fetchProducts, loading: loadingProducts } = usefetch<ProductsApiResponse>();
+  
+  const router = useRouter();
+
+  // Obtener userData del AsyncStorage
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setProductosFiltrados(productos);
-    } else {
-      const propertiesToSearch: (keyof Producto)[] = ['name', 'category', 'description', 'subcategory'];
-      const filtrados = productos.filter(producto =>
-        propertiesToSearch.some(prop => {
-          const value = producto[prop];
-          return value !== undefined &&
-                 value !== null &&
-                 value.toString().toLowerCase().includes(searchQuery.toLowerCase());
-        })
-      );
-      setProductosFiltrados(filtrados);
+    const getUserData = async () => {
+      try {
+        const currentUser = await AsyncStorage.getItem('currentUser');
+        if (currentUser) {
+          const userData = JSON.parse(currentUser);
+          setUserId(userData._id);
+          setUserEmail(userData.email);
+          console.log('✅ Usuario cargado:', userData._id, userData.email);
+        } else {
+          console.log('❌ No hay usuario en AsyncStorage');
+        }
+      } catch (error) {
+        console.error('❌ Error obteniendo userData:', error);
+      }
+    };
+
+    getUserData();
+  }, []);
+
+  // Aplicar filtro por type si viene de navegación desde categoría
+  useEffect(() => {
+    if (categoryType) {
+      console.log('🔧 Aplicando filtro por tipo de categoría:', categoryType);
+      setActiveFilters(prev => ({ ...prev, type: categoryType }));
     }
-  }, [searchQuery, productos]);
+  }, [categoryType]);
 
-  const handleToggleFavorite = (productId: number) => {
-    setProductos(prevProductos => 
-      prevProductos.map(producto => 
-        producto.id === productId 
-          ? { ...producto, favorite: !producto.favorite }
-          : producto
-      )
-    );
-  };
+  // Función para cargar productos con filtros
+  const loadProductsWithFilters = async (filters: ProductFilters = {}, searchText: string = '') => {
+    if (!userId) return;
 
-  // Función para manejar el cambio en el texto de búsqueda
-  const handleSearchChange = (text: string) => {
-    setSearchQuery(text);
-  };
+    try {
+      const hasBackendFilters = (filters.categories && filters.categories.length > 0) ||
+                               (filters.tags && filters.tags.length > 0) ||
+                               filters.type; // Incluir filtro por type
 
-  // Función para abrir el popup de filtros
-  const handleFilterPress = () => {
-    setIsFilterPopupVisible(true);
-  };
+      let queryData;
+      
+      if (hasBackendFilters) {
+        // Si hay filtros que necesitan el backend (categories, tags, type)
+        if (searchText.trim()) {
+          console.log('🔍 Buscando con filtros backend:', searchText, filters);
+          queryData = searchFilteredProductsWithFavorites(userId, searchText, filters);
+        } else {
+          console.log('🔧 Aplicando filtros backend:', filters);
+          queryData = getFilteredProductsWithFavorites(userId, filters);
+        }
+      } else {
+        // Sin filtros backend, usar las queries originales
+        if (searchText.trim()) {
+          console.log('🔍 Búsqueda simple:', searchText);
+          queryData = searchProductsWithFavorites(userId, searchText);
+        } else {
+          console.log('📋 Cargando todos los productos');
+          queryData = getProductsWithFavorites(userId);
+        }
+      }
 
-  // Función para cerrar el popup de filtros
-  const handleCloseFilterPopup = () => {
-    setIsFilterPopupVisible(false);
-  };
-
-  // Función para aplicar filtros (puedes expandir esta lógica)
-  const handleApplyFilters = (filters: any) => {
-    console.log('Filtros aplicados:', filters);
-    
-    let productosFiltradosTemp = productos;
-    
-    // Aplicar filtro de búsqueda si existe
-    if (searchQuery.trim() !== '') {
-      const propertiesToSearch: (keyof Producto)[] = ['name', 'category', 'description', 'subcategory'];
-      productosFiltradosTemp = productosFiltradosTemp.filter(producto =>
-        propertiesToSearch.some(prop => {
-          const value = producto[prop];
-          return value !== undefined &&
-                 value !== null &&
-                 value.toString().toLowerCase().includes(searchQuery.toLowerCase());
-        })
-      );
+      await fetchProducts({ 
+        method: 'post', 
+        url: '/api/findObjects', 
+        data: queryData 
+      });
+    } catch (error) {
+      console.error('❌ Error cargando productos:', error);
     }
-    
-    // Aplicar filtro de categorías
-    if (filters.categories && filters.categories.length > 0) {
-      productosFiltradosTemp = productosFiltradosTemp.filter(producto =>
-        filters.categories.some((cat: string) => 
-          producto.category.toLowerCase().includes(cat.toLowerCase()) ||
-          producto.subcategory.toLowerCase().includes(cat.toLowerCase())
-        )
-      );
+  };
+
+  // Cargar productos cuando tenemos el userId o cambian los filtros activos
+  useEffect(() => {
+    if (userId) {
+      console.log('🔄 Cargando productos para userId:', userId, 'con filtros:', activeFilters);
+      loadProductsWithFilters(activeFilters, searchQuery);
     }
+  }, [userId, activeFilters]);
+
+  // Efecto para procesar productos cuando llegan del backend
+  useEffect(() => {
+    if (!products?.items) {
+      setProductos([]);
+      setProductosFiltrados([]);
+      return;
+    }
+
+    // Ya no necesitamos transformar, usamos directamente los productos del backend
+    setProductos(products.items);
     
-    // Aplicar filtro de precios
+    // Aplicar filtros locales (precio y rating)
+    applyLocalFilters(products.items, activeFilters);
+  }, [products]);
+
+  // Función para aplicar filtros que se manejan localmente (precio y rating)
+  const applyLocalFilters = (productos: BackendProduct[], filters: ProductFilters) => {
+    let productosFiltradosTemp = [...productos];
+    
+    // Filtro por rango de precio (local)
     if (filters.priceRanges && filters.priceRanges.length > 0) {
       productosFiltradosTemp = productosFiltradosTemp.filter(producto => {
-        return filters.priceRanges.some((range: string) => {
+        const price = producto.props?.price || 0;
+        return filters.priceRanges!.some((range: string) => {
           switch (range) {
             case '0-50':
-              return producto.price >= 0 && producto.price <= 50;
+              return price >= 0 && price <= 50;
             case '50-100':
-              return producto.price > 50 && producto.price <= 100;
+              return price > 50 && price <= 100;
             case '100+':
-              return producto.price > 100;
+              return price > 100;
             default:
               return true;
           }
         });
       });
     }
-    
-    // Aplicar filtro de rating
+       
+    // Filtro por rating (local) - aquí puedes implementar tu lógica de rating
     if (filters.ratings && filters.ratings.length > 0) {
       productosFiltradosTemp = productosFiltradosTemp.filter(producto => {
-        return filters.ratings.some((rating: string) => {
-          switch (rating) {
+        // Por ahora usamos un rating por defecto, ajusta según tu lógica
+        const rating: number = 5; // Cambia este valor según la lógica real de rating
+        return filters.ratings!.some((ratingFilter: string) => {
+          switch (ratingFilter) {
             case '5':
-              return producto.rating === 5;
+              return rating === 5;
             case '4+':
-              return producto.rating >= 4;
+              return rating >= 4;
             case '3+':
-              return producto.rating >= 3;
+              return rating >= 3;
             default:
               return true;
           }
@@ -140,87 +196,273 @@ const Index = () => {
     }
     
     setProductosFiltrados(productosFiltradosTemp);
-    setIsFilterPopupVisible(false);
   };
 
-  const router = useRouter();
-  // Función para renderizar un producto
-  const renderProducto = (producto: Producto) => (
-    <ProductCard
-      id={producto.id}
-      imageUri={producto.imageUri}
-      name={producto.name}
-      rating={producto.rating}
-      category={producto.category}
-      subcategory={producto.subcategory}
-      description={producto.description}
-      price={producto.price}
-      favorite={producto.favorite}
-      onPress={() => {try{ router.push(`/${producto.id}`)}catch(e){console.error(e)}}} 
-      onToggleFavorite={handleToggleFavorite}
-    />
-  );
+  // Efecto para manejar búsqueda con debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (userId) {
+        loadProductsWithFilters(activeFilters, searchQuery);
+      }
+    }, 500);
 
-  // Función para refrescar los datos
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 1500);
-  };
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, userId]);
 
-  // Componente para mostrar cuando no hay resultados
-  const NoResultsComponent = () => (
-    <View style={styles.noResultsContainer}>
-      <Text style={styles.noResultsText}>
-        No se encontraron productos que coincidan con &quot;{searchQuery}&quot;
-      </Text>
-    </View>
-  );
+  const handleToggleFavorite = async (productId: string) => {
+    if (!userId || !userEmail) {
+      Alert.alert('Error', 'No se pudo obtener información del usuario');
+      return;
+    }
 
-  const renderScreen = () => {
-    if (activeScreen) {
-      return (
-        <>
-          <Header 
-            title="Productos" 
-            subtitle="¿Qué estás buscando hoy?"
-          >
-            <SearchBar
-              placeholder="Buscar producto"
-              value={searchQuery}
-              onChangeText={handleSearchChange}
-              onFilterPress={handleFilterPress} // Pasamos la función al SearchBar
-            />
-          </Header>
-          
-          <GenericList
-            data={productosFiltrados}
-            renderItem={renderProducto}
-            keyExtractor={(item) => item.id.toString()}
-            ListEmptyComponent={<NoResultsComponent />}
-            contentContainerStyle={styles.listContent}
-            isLoading={isLoading}
-            onRefresh={handleRefresh}
-            refreshing={isRefreshing}
-            emptyText={`No se encontraron productos que coincidan con "${searchQuery}"`}
-          />
+    const producto = productosFiltrados.find(p => p._id === productId);
+    if (!producto) return;
 
-          
-          <FilterPopup
-            visible={isFilterPopupVisible}
-            onClose={handleCloseFilterPopup}
-            onApplyFilters={handleApplyFilters}
-          />
-        </>
+    // Actualización optimista
+    setProductosFiltrados(prevProductos => 
+      prevProductos.map(p => 
+        p._id === productId 
+          ? { 
+              ...p, 
+              saved_product: p.saved_product.length > 0 ? [] : [{ _id: 'temp' }]
+            }
+          : p
+      )
+    );
+
+    // Aquí deberías implementar la llamada al backend para guardar/quitar de favoritos
+    // Por ejemplo:
+    try {
+      const isFavorite = producto.saved_product.length > 0;
+      if (isFavorite) {
+        // Llamada para quitar de favoritos
+        console.log('🗑️ Quitando de favoritos:', productId);
+        // await removeFavorite(userId, productId);
+      } else {
+        // Llamada para agregar a favoritos
+        console.log('❤️ Agregando a favoritos:', productId);
+        // await addFavorite(userId, productId);
+      }
+    } catch (error) {
+      console.error('❌ Error al actualizar favorito:', error);
+      // Revertir cambio optimista en caso de error
+      setProductosFiltrados(prevProductos => 
+        prevProductos.map(p => 
+          p._id === productId 
+            ? { 
+                ...p, 
+                saved_product: producto.saved_product
+              }
+            : p
+        )
       );
     }
   };
 
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+  };
+
+  const handleFilterPress = () => {
+    setIsFilterPopupVisible(true);
+  };
+
+  const handleCloseFilterPopup = () => {
+    setIsFilterPopupVisible(false);
+  };
+
+  const handleApplyFilters = async (filters: ProductFilters) => {
+    console.log('🔧 Filtros aplicados:', filters);
+    
+    // Mantener el filtro de type si viene de navegación de categoría
+    const updatedFilters = categoryType 
+      ? { ...filters, type: categoryType }
+      : filters;
+    
+    setActiveFilters(updatedFilters);
+    
+    // Cargar productos con los nuevos filtros
+    await loadProductsWithFilters(updatedFilters, searchQuery);
+    
+    setIsFilterPopupVisible(false);
+  };
+
+  // Función para limpiar todos los filtros
+  const handleClearFilters = async () => {
+    console.log('🧹 Limpiando filtros');
+    
+    // Mantener el filtro de type si viene de navegación de categoría
+    const clearedFilters = categoryType 
+      ? { type: categoryType }
+      : {};
+    
+    setActiveFilters(clearedFilters);
+    await loadProductsWithFilters(clearedFilters, searchQuery);
+  };
+
+  /* 
+  <ProductCard
+      product={producto} // Pasamos todo el objeto del backend
+      onPress={() => {
+        try{ 
+          router.push(`/${producto._id}` as any);
+        } catch(e) {
+          console.error(e);
+        }
+      }} 
+      onToggleFavorite={() => handleToggleFavorite(producto._id)}
+    />
+  */
+
+  const renderProducto = (producto: BackendProduct) => (
+    <ProductCard product={producto} />
+  );
+
+  const handleRefresh = async () => {
+    if (!userId) return;
+    
+    setIsRefreshing(true);
+    try {
+      await loadProductsWithFilters(activeFilters, searchQuery);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const NoResultsComponent = () => (
+    <View style={styles.noResultsContainer}>
+      <Text style={styles.noResultsText}>
+        {searchQuery.trim() 
+          ? `No se encontraron productos que coincidan con "${searchQuery}"`
+          : "No hay productos disponibles"
+        }
+      </Text>
+      {Object.values(activeFilters).some(filter => 
+        (Array.isArray(filter) && filter.length > 0) || 
+        (typeof filter === 'string' && filter !== '')
+      ) && (
+        <Text style={styles.clearFiltersText} onPress={handleClearFilters}>
+          Limpiar filtros
+        </Text>
+      )}
+    </View>
+  );
+
+  // Función para mostrar filtros activos
+  const renderActiveFilters = () => {
+    const hasActiveFilters = Object.entries(activeFilters).some(([key, value]) => {
+      if (key === 'type' && categoryType) {
+        return false; // No mostrar el filtro de type si viene de navegación
+      }
+      return (Array.isArray(value) && value.length > 0) || 
+             (typeof value === 'string' && value !== '');
+    });
+
+    if (!hasActiveFilters) return null;
+
+    return (
+      <View style={styles.activeFiltersContainer}>
+        <Text style={styles.activeFiltersTitle}>Filtros activos:</Text>
+        <View style={styles.filterTagsContainer}>
+          {activeFilters.categories?.map((category, index) => (
+            <View key={`cat-${index}`} style={styles.filterTag}>
+              <Text style={styles.filterTagText}>📂 {category}</Text>
+            </View>
+          ))}
+          {activeFilters.tags?.map((tag, index) => (
+            <View key={`tag-${index}`} style={styles.filterTag}>
+              <Text style={styles.filterTagText}>🏷️ {tag}</Text>
+            </View>
+          ))}
+          {activeFilters.priceRanges?.map((price, index) => (
+            <View key={`price-${index}`} style={styles.filterTag}>
+              <Text style={styles.filterTagText}>💰 ${price}</Text>
+            </View>
+          ))}
+          {activeFilters.ratings?.map((rating, index) => (
+            <View key={`rating-${index}`} style={styles.filterTag}>
+              <Text style={styles.filterTagText}>⭐ {rating}</Text>
+            </View>
+          ))}
+          {/* Mostrar filtro de categoría solo si NO viene de navegación */}
+          {!categoryType && activeFilters.type && (
+            <View style={styles.filterTag}>
+              <Text style={styles.filterTagText}>📁 Tipo: {activeFilters.type}</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.clearFiltersButton} onPress={handleClearFilters}>
+          Limpiar todos los filtros
+        </Text>
+      </View>
+    );
+  };
+
+  // Función para renderizar el título con información de categoría
+  const getHeaderTitle = () => {
+    if (categoryType) {
+      return `Productos - ${categoryType}`;
+    }
+    return "Productos";
+  };
+
+  const getHeaderSubtitle = () => {
+    if (categoryType) {
+      return `Explora productos de la categoría ${categoryType}`;
+    }
+    return "¿Qué estás buscando hoy?";
+  };
+
+  // Mostrar loading si no tenemos userId aún
+  if (!userId) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Cargando información del usuario...</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {renderScreen()}
+        <Header 
+          title={getHeaderTitle()} 
+          subtitle={getHeaderSubtitle()}
+        >
+          <SearchBar
+            placeholder="Buscar producto"
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            onFilterPress={handleFilterPress}
+          />
+        </Header>
+        
+        {renderActiveFilters()}
+        
+        <GenericList
+          data={productosFiltrados}
+          renderItem={renderProducto}
+          keyExtractor={(item) => item._id}
+          ListEmptyComponent={<NoResultsComponent />}
+          contentContainerStyle={styles.listContent}
+          onRefresh={handleRefresh}
+          refreshing={isRefreshing}
+          emptyText={searchQuery.trim() 
+            ? `No se encontraron productos que coincidan con "${searchQuery}"`
+            : "No hay productos disponibles"
+          }
+        />
+
+        <FilterPopup
+          visible={isFilterPopupVisible}
+          onClose={handleCloseFilterPopup}
+          onApplyFilters={handleApplyFilters}
+          activeFilters={activeFilters} // Pasar filtros activos al popup
+        />
       </View>
     </SafeAreaView>
   );
@@ -235,6 +477,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
   listContent: {
     padding: 10,
     paddingBottom: 20,
@@ -248,24 +501,49 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+    marginBottom: 10,
   },
-  screenContainer: {
-    flex: 1,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  screenTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#333',
-  },
-  screenText: {
-    fontSize: 16,
-    color: '#666',
+  clearFiltersText: {
+    fontSize: 14,
+    color: '#007AFF',
     textAlign: 'center',
-  }
+    textDecorationLine: 'underline',
+  },
+  // Estilos para filtros activos
+  activeFiltersContainer: {
+    backgroundColor: '#E3F2FD',
+    margin: 10,
+    padding: 10,
+    borderRadius: 8,
+  },
+  activeFiltersTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1976D2',
+    marginBottom: 5,
+  },
+  filterTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
+    marginBottom: 10,
+  },
+  filterTag: {
+    backgroundColor: '#BBDEFB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  filterTagText: {
+    fontSize: 12,
+    color: '#0D47A1',
+  },
+  clearFiltersButton: {
+    fontSize: 12,
+    color: '#D32F2F',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
 });
 
 export default Index;

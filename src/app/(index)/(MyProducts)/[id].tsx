@@ -1,43 +1,38 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import usefetch from "../../../hooks/useFetch";
-import { getProductById } from '../../../utils/queryProduct';
+import { getProductById } from '../../../utils/queryProduct'; // Tu archivo de queries
 
-// Interface para el producto del backend (DEBE COINCIDIR con la del index)
+// Interface para el producto del backend
 interface BackendProduct {
   _id: string;
   name: string;
   description: string;
+  image?: string;
   type: string;
-  categorie: string;
-  tags?: string[];
   props: {
     price: number;
     images?: string[];
     [key: string]: any;
   };
-  published: string;
-  saved_product: {
-    _id: string;
-  }[]; // Array vacío = no guardado, con elementos = guardado
-  object_type?: {
+  object_type: {
     _id: string;
     name: string;
     parent: string;
   }[];
+  tags?: string[];
   owner?: string;
   status?: string;
 }
@@ -49,6 +44,44 @@ interface ProductApiResponse {
   error?: any;
   items: BackendProduct[];
 }
+
+// Interface para la UI
+interface Producto {
+  id: string;
+  imageUri: string;
+  name: string;
+  rating: number;
+  category: string;
+  subcategory: string;
+  description: string;
+  price: number;
+  favorite: boolean;
+  // Campos adicionales del backend
+  images?: string[];
+  tags?: string[];
+  owner?: string;
+  props?: any;
+}
+
+// Función para transformar datos del backend
+const transformProduct = (backendProduct: BackendProduct): Producto => {
+  return {
+    id: backendProduct._id,
+    imageUri: backendProduct.image || backendProduct.props?.images?.[0] || '',
+    name: backendProduct.name,
+    rating: 4.5, // Por defecto
+    category: backendProduct.object_type?.[0]?.name || 'Sin categoría',
+    subcategory: backendProduct.object_type?.[0]?.name || 'Sin categoría',
+    description: backendProduct.description,
+    price: backendProduct.props?.price || 0,
+    favorite: false, // Esto lo manejas localmente
+    // Campos adicionales
+    images: backendProduct.props?.images,
+    tags: backendProduct.tags,
+    owner: backendProduct.owner,
+    props: backendProduct.props,
+  };
+};
 
 // Componente para las estrellas de calificación
 const StarRating: React.FC<{ rating: number; maxStars?: number }> = ({ rating, maxStars = 5 }) => {
@@ -72,63 +105,30 @@ export default function ProductoDetalle() {
   const router = useRouter();
   
   // Estados
-  const [producto, setProducto] = useState<BackendProduct | null>(null);
+  const [producto, setProducto] = useState<Producto | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
 
-  // Hook para obtener datos del backend
+  // Hook para obtener datos del backend (igual que en index)
   const { data: productData, execute: fetchProduct, loading: loadingProduct } = usefetch<ProductApiResponse>();
 
-  // Obtener userData del AsyncStorage
+  // Cargar producto al montar el componente
   useEffect(() => {
-    const getUserData = async () => {
-      try {
-        const currentUser = await AsyncStorage.getItem('currentUser');
-        if (currentUser) {
-          const userData = JSON.parse(currentUser);
-          setUserId(userData._id);
-          console.log('✅ Usuario cargado en detalle:', userData._id);
-        } else {
-          console.log('❌ No hay usuario en AsyncStorage');
-          setError('No se pudo obtener información del usuario');
-        }
-      } catch (error) {
-        console.error('❌ Error obteniendo userData:', error);
-        setError('Error obteniendo información del usuario');
-      }
-    };
-
-    getUserData();
-  }, []);
-
-  // Cargar producto cuando tenemos userId e id
-  useEffect(() => {
-    if (userId && id && typeof id === 'string') {
-      console.log('🔄 Cargando producto:', id, 'para usuario:', userId);
-      fetchProduct({ 
-        method: 'post', 
-        url: '/api/findObjects', 
-        data: getProductById(userId, id)
-      });
-    } else if (!userId) {
-      console.log('⏳ Esperando userId...');
+    if (id && typeof id === 'string') {
+      fetchProduct({ method: 'post', url: '/api/findObjects', data: getProductById(id) });
     } else {
-      console.log('❌ ID de producto inválido:', id);
       setError('ID de producto inválido');
     }
-  }, [userId, id]);
+  }, [id]);
 
   // Efecto para procesar datos cuando llegan del backend
   useEffect(() => {
     if (productData?.items && productData.items.length > 0) {
-      console.log('✅ Producto cargado:', productData.items[0]);
-      setProducto(productData.items[0]);
+      const transformedProduct = transformProduct(productData.items[0]);
+      setProducto(transformedProduct);
       setError(null);
     } else if (productData?.items && productData.items.length === 0) {
-      console.log('❌ Producto no encontrado');
       setError('Producto no encontrado');
     } else if (productData?.error) {
-      console.log('❌ Error del backend:', productData.error);
       setError('Error al cargar el producto');
     }
   }, [productData]);
@@ -136,49 +136,9 @@ export default function ProductoDetalle() {
   // Manejar toggle de favorito
   const handleToggleFavorite = () => {
     if (producto) {
-      setProducto(prev => 
-        prev ? { 
-          ...prev, 
-          saved_product: prev.saved_product.length > 0 ? [] : [{ _id: 'temp' }]
-        } : null
-      );
-      
-      // Aquí implementarías la llamada al backend para guardar/quitar favoritos
-      const isFavorite = producto.saved_product.length > 0;
-      console.log(isFavorite ? '🗑️ Quitando de favoritos' : '❤️ Agregando a favoritos', producto._id);
+      setProducto(prev => prev ? { ...prev, favorite: !prev.favorite } : null);
     }
   };
-
-  // Función para obtener la imagen principal
-  const getImageUri = () => {
-    if (producto?.props?.images && producto.props.images.length > 0) {
-      return producto.props.images[0];
-    }
-    return '';
-  };
-
-  // Función para formatear el precio
-  const formatPrice = (price: number) => {
-    return `$${price.toLocaleString('es-AR')}`;
-  };
-
-  // Función para calcular rating (por defecto)
-  const getRating = () => {
-    return 4.5; // Ajusta según tu lógica
-  };
-
-  // Función para formatear fecha
-  const formatPublishedDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('es-AR');
-    } catch {
-      return '';
-    }
-  };
-
-  // Determinar si está en favoritos
-  const isFavorite = producto?.saved_product && producto.saved_product.length > 0;
 
   // Componente de Loading
   const LoadingComponent = () => (
@@ -197,12 +157,8 @@ export default function ProductoDetalle() {
       <TouchableOpacity 
         style={styles.retryButton} 
         onPress={() => {
-          if (userId && id && typeof id === 'string') {
-            fetchProduct({ 
-              method: 'post', 
-              url: '/api/findObjects', 
-              data: getProductById(userId, id)
-            });
+          if (id && typeof id === 'string') {
+            fetchProduct({ method: 'post', url: '/api/findObjects', data: getProductById(id) });
           }
         }}
       >
@@ -211,8 +167,8 @@ export default function ProductoDetalle() {
     </View>
   );
 
-  // Si está cargando o no tenemos userId
-  if (loadingProduct || !userId) {
+  // Si está cargando
+  if (loadingProduct) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -262,9 +218,9 @@ export default function ProductoDetalle() {
           onPress={handleToggleFavorite}
         >
           <Ionicons 
-            name={isFavorite ? "heart" : "heart-outline"} 
+            name={producto.favorite ? "heart" : "heart-outline"} 
             size={24} 
-            color={isFavorite ? "#FF4444" : "white"} 
+            color={producto.favorite ? "#FF4444" : "white"} 
           />
         </TouchableOpacity>
       </View>
@@ -276,7 +232,7 @@ export default function ProductoDetalle() {
           <View style={styles.imageContainer}>
             <Image
               source={{ 
-                uri: getImageUri() || 'https://via.placeholder.com/200x300/F3F4F6/6B7280?text=Producto'
+                uri: producto.imageUri || 'https://via.placeholder.com/200x300/F3F4F6/6B7280?text=Producto'
               }}
               style={styles.productImage}
               resizeMode="contain"
@@ -289,19 +245,19 @@ export default function ProductoDetalle() {
             
             {/* Calificación */}
             <View style={styles.ratingContainer}>
-              <StarRating rating={Math.round(getRating())} />
-              <Text style={styles.ratingText}>{getRating().toFixed(1)}</Text>
+              <StarRating rating={Math.round(producto.rating)} />
+              <Text style={styles.ratingText}>{producto.rating.toFixed(1)}</Text>
             </View>
 
             {/* Precio */}
             <Text style={styles.price}>
-              {formatPrice(producto.props?.price || 0)}
+              ${producto.price.toLocaleString('es-AR')}
             </Text>
 
             {/* Categoría */}
             <View style={styles.categoryContainer}>
               <Ionicons name="pricetag-outline" size={16} color="#6B7280" />
-              <Text style={styles.categoryText}>{producto.categorie}</Text>
+              <Text style={styles.categoryText}>{producto.category}</Text>
             </View>
 
             {/* Tags si los hay */}
@@ -335,11 +291,11 @@ export default function ProductoDetalle() {
         )}
 
         {/* Imágenes adicionales si las hay */}
-        {producto.props?.images && producto.props.images.length > 1 && (
+        {producto.images && producto.images.length > 1 && (
           <View style={styles.additionalImagesContainer}>
             <Text style={styles.additionalImagesTitle}>Más imágenes</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.additionalImagesScroll}>
-              {producto.props.images.slice(1).map((imageUri, index) => (
+              {producto.images.slice(1).map((imageUri, index) => (
                 <Image
                   key={index}
                   source={{ uri: imageUri }}
@@ -356,18 +312,12 @@ export default function ProductoDetalle() {
           <Text style={styles.additionalInfoTitle}>Información adicional</Text>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Categoría:</Text>
-            <Text style={styles.infoValue}>{producto.categorie}</Text>
+            <Text style={styles.infoValue}>{producto.category}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>ID del producto:</Text>
-            <Text style={styles.infoValue}>{producto._id}</Text>
+            <Text style={styles.infoValue}>{producto.id}</Text>
           </View>
-          {producto.published && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Fecha de publicación:</Text>
-              <Text style={styles.infoValue}>{formatPublishedDate(producto.published)}</Text>
-            </View>
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>

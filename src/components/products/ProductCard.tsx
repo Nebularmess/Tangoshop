@@ -2,30 +2,33 @@ import { Ionicons } from '@expo/vector-icons';
 import * as React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-interface ProductCardProps {
-  id: number;
-  imageUri: string;
+// Interface para el producto que viene del backend (nueva estructura)
+interface BackendProduct {
+  _id: string;
   name: string;
-  rating: number;
-  category: string;
-  subcategory: string;
   description: string;
-  price: number;
-  favorite?: boolean;
+  type: string;
+  categorie: string;
+  tags?: string[];
+  props: {
+    price: number;
+    images?: string[];
+    [key: string]: any;
+  };
+  published: string;
+  saved_product: {
+    _id: string;
+  }[]; // Array vacío = no guardado, con elementos = guardado
+}
+
+interface ProductCardProps {
+  product: BackendProduct; // Ahora recibe todo el objeto del backend
   onPress: () => void;
-  onToggleFavorite: (id: number) => void;
+  onToggleFavorite: (id: string) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
-  id,
-  imageUri,
-  name,
-  rating,
-  category,
-  subcategory,
-  description,
-  price,
-  favorite,
+  product,
   onPress,
   onToggleFavorite,
 }) => {
@@ -33,8 +36,34 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const formatPrice = (price: number) => {
     return `$${price.toLocaleString('es-AR')}`;
   };
+
   const handleToggleFavorite = () => {
-    onToggleFavorite(id);
+    onToggleFavorite(product._id);
+  };
+
+  // Determinar si está en favoritos
+  const isFavorite = product.saved_product && product.saved_product.length > 0;
+
+  // Obtener la imagen principal
+  const getImageUri = () => {
+    if (product.props?.images && product.props.images.length > 0) {
+      return product.props.images[0];
+    }
+    return '';
+  };
+
+  const getRating = () => {
+    return 4.5;
+  };
+
+  // Formatear fecha de publicación
+  const formatPublishedDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('es-AR');
+    } catch {
+      return '';
+    }
   };
 
   return (
@@ -42,13 +71,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <View style={styles.contentWrapper}>
         <View style={styles.mainContent}>
           {/* Imagen del producto */}
-          <Image source={{ uri: imageUri }} style={styles.productImage} />
+          <Image 
+            source={{ uri: getImageUri() }} 
+            style={styles.productImage}
+          />
 
           {/* Información del producto */}
           <View style={styles.infoContainer}>
             {/* Nombre del producto */}
             <Text style={styles.productName} numberOfLines={1}>
-              {name}
+              {product.name}
             </Text>
             
             {/* Rating y categoría */}
@@ -56,29 +88,29 @@ const ProductCard: React.FC<ProductCardProps> = ({
               <View style={styles.ratingBadge}>
                 <Ionicons name="star" size={12} color="#2563EB" />
                 <Text style={styles.ratingText}>
-                  {rating.toFixed(1)}
+                  {getRating().toFixed(1)}
                 </Text>
               </View>
             </View>
             
             {/* Información adicional */}
             <View style={styles.detailsRow}>
-              {/* Columna izquierda: Descripción y subcategoría */}
+              {/* Columna izquierda: Descripción y tags */}
               <View style={styles.leftColumn}>
-                {description && (
+                {product.description && (
                   <View style={styles.detailItem}>
                     <Ionicons name="information-circle" size={14} color="#6B7280" />
                     <Text style={styles.detailText} numberOfLines={1}>
-                      {description}
+                      {product.description}
                     </Text>
                   </View>
                 )}
                 
-                {subcategory && (
+                {product.tags && product.tags.length > 0 && (
                   <View style={styles.detailItem}>
                     <Ionicons name="pricetag" size={14} color="#6B7280" style={{ marginTop: 1 }} />
                     <Text style={styles.detailText}>
-                      {subcategory}
+                      {product.tags[0]} {product.tags.length > 1 && `+${product.tags.length - 1}`}
                     </Text>
                   </View>
                 )}
@@ -86,11 +118,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
               {/* Columna derecha: Categoría y Precio */}
               <View style={styles.rightColumn}>
-                {category && (
+                {product.categorie && (
                   <View style={styles.detailItemRight}>
                     <Ionicons name="apps" size={14} color="#6B7280" />
                     <Text style={styles.detailText} numberOfLines={1}>
-                      {category}
+                      {product.categorie}
                     </Text>
                   </View>
                 )}
@@ -98,11 +130,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <View style={styles.detailItemRight}>
                   <Ionicons name="cash" size={14} color="#6B7280" />
                   <Text style={styles.detailText} numberOfLines={1}>
-                    {formatPrice(price)}
+                    {formatPrice(product.props?.price || 0)}
                   </Text>
                 </View>
               </View>
             </View>
+
+            {/* Fecha de publicación */}
+            {product.published && (
+              <View style={styles.publishedContainer}>
+                <Ionicons name="time-outline" size={12} color="#9CA3AF" />
+                <Text style={styles.publishedText}>
+                  {formatPublishedDate(product.published)}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Flecha de navegación */}
@@ -114,7 +156,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
       {/* Icono de favorito */}
       <TouchableOpacity style={styles.favoriteButton} onPress={handleToggleFavorite}>
-        <Ionicons name={favorite ? "heart" : "heart-outline"} size={20} color={favorite ? "#FF4444" : "#666"} />
+        <Ionicons 
+          name={isFavorite ? "heart" : "heart-outline"} 
+          size={20} 
+          color={isFavorite ? "#FF4444" : "#666"} 
+        />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -210,6 +256,16 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginLeft: 4,
     flex: 1,
+  },
+  publishedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  publishedText: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginLeft: 4,
   },
   chevronContainer: {
     alignSelf: 'center',
