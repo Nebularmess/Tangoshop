@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Linking, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React from 'react';
+import { Alert, Linking, Text, TouchableOpacity, View } from 'react-native';
 
 interface ActionButtonsProps {
   phone?: string;
@@ -67,7 +67,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 
         <TouchableOpacity
           onPress={handleCall}
-          className='flex-1 bg-blue-600 rounded-xl py-4 flex-row items-center justify-center'
+          className='flex-1 bg-blue-600 rounded-xl py-4 flex-row items-center justify-center mr-1'
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons name="phone" size={20} color="white" />
@@ -76,7 +76,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 
         <TouchableOpacity
           onPress={handleMessage}
-          className='flex-1 bg-blue-600 rounded-xl py-4 flex-row items-center justify-center'
+          className='flex-1 bg-blue-600 rounded-xl py-4 flex-row items-center justify-center ml-1'
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons name="message-text" size={20} color="white" />

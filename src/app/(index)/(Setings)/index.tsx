@@ -1,9 +1,11 @@
+// src/app/(index)/(Setings)/index.tsx
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Header from '../../../components/header';
-import NavBar from '../../../components/navBar';
+import useStore from '../../../hooks/useStorage';
 
 type Screen = 'index' | 'Proveedores' | 'Buscador' | 'Favoritos' | 'Configuracion';
 
@@ -16,17 +18,20 @@ interface SettingOption {
 
 const Index = () => {
   const [activeScreen, setActiveScreen] = useState<Screen>('Configuracion');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  const { clear: clearStorage } = useStore();
 
   const handleEditarCuenta = () => {
-    router.push('/editarPerfil');
+    router.push('/(index)/(Setings)/editarPerfil');
   };
 
   const handleMiCatalogo = () => {
-    router.push('/miCatalogo');
+    router.push('/(index)/(Setings)/editarMiCatalogo');
   };
 
   const handleAsistencia = () => {
-    router.push('/asistencia');
+    router.push('/(index)/(Setings)/asistencia');
   };
 
   const handleCerrarSesion = () => {
@@ -41,14 +46,118 @@ const Index = () => {
         {
           text: 'Cerrar Sesión',
           style: 'destructive',
-          onPress: () => {
-            console.log('Cerrando sesión...');
-          },
+          onPress: performLogout,
         },
       ]
     );
   };
 
+  const performLogout = async () => {
+  setIsLoggingOut(true);
+  
+  try {
+    console.log('🚪 Iniciando proceso de logout...');
+    
+    // Paso 1: Limpiar Zustand Store
+    console.log('🧹 Limpiando Zustand store...');
+    clearStorage();
+    
+    // Paso 2: Limpiar AsyncStorage
+    console.log('🗑️ Limpiando AsyncStorage...');
+    await AsyncStorage.clear();
+    
+    // Paso 3: Limpiar storage web si aplica
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      console.log('🌐 Limpiando web storage...');
+      window.localStorage?.clear();
+      window.sessionStorage?.clear();
+    }
+    
+    console.log('✅ Logout completado, redirigiendo...');
+    
+    // ✅ USAR setTimeout PARA ASEGURAR QUE EL ESTADO SE ACTUALICE
+    setTimeout(() => {
+      try {
+        // Verificar si el router está disponible
+        if (router && typeof router.replace === 'function') {
+          router.replace('/(auth)/termsAgree');
+        } else {
+          console.warn('Router no disponible, usando push');
+          router.push('/(auth)/termsAgree');
+        }
+      } catch (navError) {
+        console.error('Error en navegación:', navError);
+        // Fallback: intentar con push
+        try {
+          router.push('/(auth)/termsAgree');
+        } catch (pushError) {
+          console.error('Error en push fallback:', pushError);
+        }
+      }
+    }, 100); // Pequeño delay para permitir que React actualice el estado
+    
+  } catch (error) {
+    console.error('❌ Error durante el logout:', error);
+    
+    // Estrategia de fallback: intentar limpiar lo que se pueda
+    try {
+      console.log('🔄 Intentando fallback de logout...');
+      clearStorage();
+      
+      // Limpiar elementos críticos específicos
+      const criticalKeys = ['currentUser', 'authToken', 'userSession'];
+      for (const key of criticalKeys) {
+        try {
+          await AsyncStorage.removeItem(key);
+        } catch (keyError) {
+          console.warn(`Error removiendo ${key}:`, keyError);
+        }
+      }
+      
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        try {
+          criticalKeys.forEach(key => {
+            window.localStorage?.removeItem(key);
+          });
+          window.sessionStorage?.clear();
+        } catch (webError) {
+          console.warn('⚠️ Error limpiando web storage:', webError);
+        }
+      }
+      
+      // Navegar con delay incluso si hubo errores
+      setTimeout(() => {
+        try {
+          router.replace('/(auth)/termsAgree');
+        } catch (navError) {
+          console.error('Error en navegación de fallback:', navError);
+          // Último recurso
+          router.push('/(auth)/termsAgree');
+        }
+      }, 200);
+      
+    } catch (fallbackError) {
+      console.error('❌ Error en fallback de logout:', fallbackError);
+      
+      // Último recurso: solo navegar con delay
+      setTimeout(() => {
+        try {
+          router.replace('/(auth)/termsAgree');
+        } catch (finalError) {
+          console.error('Error final en navegación:', finalError);
+          // Si todo falla, al menos forzar la limpieza del estado local
+          setIsLoggingOut(false);
+        }
+      }, 300);
+    }
+  } finally {
+    // Asegurar que el loading se quite después de un tiempo razonable
+    setTimeout(() => {
+      setIsLoggingOut(false);
+    }, 1000);
+  }
+};
+  
   const settingsOptions: SettingOption[] = [
     {
       id: 'editarCuenta',
@@ -71,7 +180,11 @@ const Index = () => {
   ];
 
   const SettingItem = ({ option }: { option: SettingOption }) => (
-    <TouchableOpacity style={styles.settingItem} onPress={option.onPress}>
+    <TouchableOpacity 
+      style={styles.settingItem} 
+      onPress={option.onPress}
+      disabled={isLoggingOut}
+    >
       <View style={styles.settingItemContent}>
         <View style={styles.iconContainer}>
           {option.icon}
@@ -96,14 +209,29 @@ const Index = () => {
                 <SettingItem key={option.id} option={option} />
               ))}
             </View>
+
             <View style={styles.logoutSection}>
-              <TouchableOpacity style={styles.logoutButton} onPress={handleCerrarSesion}>
+              <TouchableOpacity 
+                style={[
+                  styles.logoutButton,
+                  isLoggingOut && styles.logoutButtonDisabled
+                ]} 
+                onPress={handleCerrarSesion}
+                disabled={isLoggingOut}
+              >
                 <View style={styles.iconContainer}>
-                  <Icon name="log-out" size={32} color="#FFFFFF" />
+                  <Icon 
+                    name={isLoggingOut ? "loader" : "log-out"} 
+                    size={32} 
+                    color="#FFFFFF" 
+                  />
                 </View>
-                <Text style={styles.logoutText}>Cerrar Sesión</Text>
+                <Text style={styles.logoutText}>
+                  {isLoggingOut ? 'Cerrando Sesión...' : 'Cerrar Sesión'}
+                </Text>
               </TouchableOpacity>
             </View>
+            
             <View style={styles.infoSection}>
               <Text style={styles.infoText}>Versión 1.0.0</Text>
               <Text style={styles.infoSubtext}>© 2025 Tango Shop</Text>
@@ -119,7 +247,6 @@ const Index = () => {
       <View style={styles.container}>
         {renderScreen()}
       </View>
-      <NavBar activeScreen={activeScreen} />
     </SafeAreaView>
   );
 };
@@ -180,22 +307,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 17,
   },
-  settingIcon: {
-    fontSize: 32,
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
   settingTitle: {
     fontSize: 24,
     fontWeight: '400',
     color: '#FFFFFF',
     flex: 1,
     fontFamily: 'Segoe UI',
-  },
-  settingArrow: {
-    fontSize: 20,
-    color: '#C0C0C0',
-    fontWeight: '300',
   },
   logoutSection: {
     marginBottom: 30,
@@ -221,9 +338,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1A2F55',
   },
-  logoutIcon: {
-    fontSize: 32,
-    color: '#FFFFFF',
+  logoutButtonDisabled: {
+    opacity: 0.6,
   },
   logoutText: {
     fontSize: 24,

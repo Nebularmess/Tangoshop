@@ -1,22 +1,24 @@
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Clipboard,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  Linking,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import Header from '../../../components/header';
 
 interface CatalogoData {
+  _id: string;
+  userId: string;
   nombreTienda: string;
   descripcion: string;
   telefono: string;
@@ -24,643 +26,817 @@ interface CatalogoData {
   sitioWeb: string;
   referencias: string;
   imagenPortada: string;
+  productosSeleccionados: string[];
+  isPublic: boolean;
+  slug: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Producto {
-  id: string;
-  nombre: string;
-  precio: string;
-  imagen: string;
-  seleccionado: boolean;
+  _id: string;
+  name: string;
+  price: number;
+  image?: string;
+  description?: string;
+  category?: string;
 }
 
-interface Categoria {
-  id: string;
-  nombre: string;
-  seleccionada: boolean;
+interface UserData {
+  _id: string;
+  name: string;
+  last_name: string;
+  email: string;
+  image?: string;
 }
 
-const MiCatalogo = () => {
-  const [catalogoData, setCatalogoData] = useState<CatalogoData>({
-    nombreTienda: '',
-    descripcion: '',
-    telefono: '',
-    email: '',
-    sitioWeb: '',
-    referencias: '',
-    imagenPortada: '',
-  });
+const { width } = Dimensions.get('window');
+const API_BASE_URL = 'https://api.tangoshop.com'; // Cambiado para React Native
 
-  const [productos] = useState<Producto[]>([
+export default function MiCatalogo() {
+  const [catalogData, setCatalogData] = useState<CatalogoData | null>(null);
+  const [products, setProducts] = useState<Producto[]>([]);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
 
-  ]);
+  // Para demo, usando un slug fijo. En producción, obtendrías esto de los parámetros de navegación
+  const slug = 'mi-catalogo-demo';
 
-  const [productosSeleccionados, setProductosSeleccionados] = useState<Producto[]>(
-    productos.filter(p => p.seleccionado)
+  useEffect(() => {
+    loadCatalogData(slug);
+  }, []);
+
+  const loadCatalogData = async (catalogSlug: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Buscar catálogo por slug
+      const catalogQuery = [
+        {
+          "$match": {
+            "slug": catalogSlug,
+            "type": "catalog",
+            "isPublic": true
+          }
+        },
+        {
+          "$project": {
+            "__v": 0
+          }
+        }
+      ];
+
+      const catalogResponse = await fetch(`${API_BASE_URL}/api/findObjects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(catalogQuery)
+      });
+
+      const catalogResult = await catalogResponse.json();
+
+      if (!catalogResult.items || catalogResult.items.length === 0) {
+        setError('Catálogo no encontrado');
+        return;
+      }
+
+      const catalog = catalogResult.items[0];
+      setCatalogData(catalog);
+
+      // Cargar datos del usuario
+      await loadUserData(catalog.userId);
+
+      // Cargar productos seleccionados
+      if (catalog.productosSeleccionados && catalog.productosSeleccionados.length > 0) {
+        await loadProducts(catalog.productosSeleccionados);
+      }
+
+    } catch (error) {
+      console.error('Error loading catalog:', error);
+      setError('Error al cargar el catálogo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUserData = async (userId: string) => {
+    try {
+      const userQuery = [
+        {
+          "$match": {
+            "$expr": {
+              "$eq": [{ "$toString": "$_id" }, userId]
+            }
+          }
+        },
+        {
+          "$project": {
+            "name": 1,
+            "last_name": 1,
+            "email": 1,
+            "image": 1
+          }
+        }
+      ];
+
+      const userResponse = await fetch(`${API_BASE_URL}/api/findObjects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userQuery)
+      });
+
+      const userResult = await userResponse.json();
+      if (userResult.items && userResult.items.length > 0) {
+        setUserData(userResult.items[0]);
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  const loadProducts = async (productIds: string[]) => {
+    try {
+      const productsQuery = [
+        {
+          "$match": {
+            "$expr": {
+              "$in": [{ "$toString": "$_id" }, productIds]
+            },
+            "type": "product",
+            "status": { "$ne": "deleted" }
+          }
+        },
+        {
+          "$project": {
+            "name": 1,
+            "price": 1,
+            "image": 1,
+            "description": 1,
+            "category": 1
+          }
+        }
+      ];
+
+      const productsResponse = await fetch(`${API_BASE_URL}/api/findObjects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productsQuery)
+      });
+
+      const productsResult = await productsResponse.json();
+      if (productsResult.items) {
+        setProducts(productsResult.items);
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+    }
+  };
+
+  const getCategories = () => {
+    const categories = ['Todos', ...new Set(products.map(p => p.category).filter(Boolean))];
+    return categories;
+  };
+
+  const getFilteredProducts = () => {
+    if (selectedCategory === 'Todos') {
+      return products;
+    }
+    return products.filter(product => product.category === selectedCategory);
+  };
+
+  const handleContactClick = async (type: 'phone' | 'email' | 'whatsapp') => {
+    if (!catalogData) return;
+
+    try {
+      switch (type) {
+        case 'phone':
+          await Linking.openURL(`tel:${catalogData.telefono}`);
+          break;
+        case 'email':
+          await Linking.openURL(`mailto:${catalogData.email}`);
+          break;
+        case 'whatsapp':
+          const whatsappNumber = catalogData.telefono.replace(/[^\d]/g, '');
+          const message = `Hola! Vi tu catálogo "${catalogData.nombreTienda}" y me interesa conocer más sobre tus productos.`;
+          await Linking.openURL(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`);
+          break;
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo abrir la aplicación');
+    }
+  };
+
+  const handleShare = () => {
+    // En React Native, necesitarías usar expo-sharing o react-native-share
+    Alert.alert('Compartir', 'Función de compartir disponible próximamente');
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  const renderProduct = ({ item: product }: { item: Producto }) => (
+    <View style={styles.productCard}>
+      <View style={styles.productImageContainer}>
+        {product.image ? (
+          <Image 
+            source={{ uri: product.image }}
+            style={styles.productImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.noImageContainer}>
+            <Icon name="eye" size={24} color="#9CA3AF" />
+            <Text style={styles.noImageText}>Sin imagen</Text>
+          </View>
+        )}
+        {product.category && (
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryText}>{product.category}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName}>{product.name}</Text>
+        {product.description && (
+          <Text style={styles.productDescription} numberOfLines={2}>
+            {product.description}
+          </Text>
+        )}
+        <View style={styles.productFooter}>
+          <Text style={styles.productPrice}>{formatPrice(product.price)}</Text>
+          <TouchableOpacity 
+            style={styles.consultButton}
+            onPress={() => handleContactClick('whatsapp')}
+          >
+            <Text style={styles.consultButtonText}>Consultar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
   );
 
-  const [showImageModal, setShowImageModal] = useState(false);
-  const [tempImageUrl, setTempImageUrl] = useState('');
-
-  const catalogoUrl = `https://plataforma.com/catalogo/${catalogoData.nombreTienda.toLowerCase().replace(/\s+/g, '-') || 'usuario'}`;
-
-  const handleBack = () => {
-    router.back();
-  };
-
-  const handleInputChange = (field: keyof CatalogoData, value: string) => {
-    setCatalogoData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleCopiarUrl = () => {
-    Clipboard.setString(catalogoUrl);
-    Alert.alert('¡Copiado!', 'La URL de tu catálogo ha sido copiada al portapapeles.');
-  };
-
-  const handleSeleccionarImagen = () => {
-    setTempImageUrl(catalogoData.imagenPortada);
-    setShowImageModal(true);
-  };
-
-  const handleConfirmarImagen = () => {
-    if (tempImageUrl && tempImageUrl.trim()) {
-      handleInputChange('imagenPortada', tempImageUrl.trim());
-    } else {
-      handleInputChange('imagenPortada', '');
-    }
-    setShowImageModal(false);
-    setTempImageUrl('');
-  };
-
-  const handleCancelarImagen = () => {
-    setShowImageModal(false);
-    setTempImageUrl('');
-  };
-
-  const toggleProducto = (productoId: string) => {
-    const producto = productos.find(p => p.id === productoId);
-    if (producto) {
-      setProductosSeleccionados(prev => {
-        const yaSeleccionado = prev.find(p => p.id === productoId);
-        if (yaSeleccionado) {
-          return prev.filter(p => p.id !== productoId);
-        } else {
-          return [...prev, producto];
-        }
-      });
-    }
-  };
-
-  const handleGuardar = () => {
-    if (!catalogoData.nombreTienda.trim()) {
-      Alert.alert('Error', 'El nombre de la tienda es obligatorio.');
-      return;
-    }
-
-    Alert.alert(
-      'Catálogo Guardado',
-      '¡Tu catálogo ha sido actualizado exitosamente!',
-      [
-        {
-          text: 'OK',
-          onPress: () => console.log('Catálogo guardado:', catalogoData),
-        },
-      ]
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.loadingText}>Cargando catálogo...</Text>
+        </View>
+      </SafeAreaView>
     );
-  };
+  }
+
+  if (error || !catalogData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorEmoji}>😞</Text>
+          <Text style={styles.errorTitle}>Catálogo no encontrado</Text>
+          <Text style={styles.errorMessage}>
+            {error || 'El catálogo que buscas no existe o no está disponible públicamente.'}
+          </Text>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backButtonText}>Volver</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const categories = getCategories();
+  const filteredProducts = getFilteredProducts();
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header
-        title="Mi Catálogo"
-        subtitle="Personaliza tu catálogo público"
-      >
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <View style={styles.backButtonCircle}>
-            <Icon name="arrow-left" size={20} color="#FFFFFF" />
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Icon name="arrow-left" size={24} color="#1F2937" />
+          </TouchableOpacity>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>{catalogData.nombreTienda}</Text>
+            <Text style={styles.headerSubtitle}>Catálogo de productos</Text>
           </View>
-        </TouchableOpacity>
-      </Header>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+              <Icon name="share-2" size={16} color="#374151" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.contactButton}
+              onPress={() => handleContactClick('whatsapp')}
+            >
+              <Icon name="message-circle" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
 
-      <View style={styles.contentContainer}>
-        <ScrollView 
-          style={styles.scrollContainer} 
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContentContainer}
-        >
-          {/* Sección 1: Formulario de Configuración */}
-          <View style={styles.section}>
-            {/* Imagen de Portada */}
-            <View style={styles.imageSection}>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Imagen de Portada (Opcional)</Text>
-                <TouchableOpacity 
-                  style={styles.imageUpload}
-                  onPress={handleSeleccionarImagen}
-                >
-                  {catalogoData.imagenPortada ? (
-                    <Image 
-                      source={{ uri: catalogoData.imagenPortada }} 
-                      style={styles.uploadedImage}
-                      onError={() => {
-                        Alert.alert('Error', 'No se pudo cargar la imagen. Verifica que la URL sea válida.');
-                        handleInputChange('imagenPortada', '');
-                      }}
-                    />
-                  ) : (
-                    <View style={styles.placeholderImage}>
-                      <Icon name="image" size={32} color="#9CA3AF" />
-                      <Text style={styles.placeholderText}>Toca para agregar URL de imagen</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-                {catalogoData.imagenPortada && (
+      <ScrollView style={styles.content}>
+        {/* Sección de perfil */}
+        <View style={styles.profileSection}>
+          <View style={styles.profileContent}>
+            {/* Avatar */}
+            <View style={styles.avatarContainer}>
+              {catalogData.imagenPortada || userData?.image ? (
+                <Image
+                  source={{ uri: catalogData.imagenPortada || userData?.image || '' }}
+                  style={styles.avatar}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarText}>
+                    {catalogData.nombreTienda.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.profileInfo}>
+              <Text style={styles.storeName}>{catalogData.nombreTienda}</Text>
+              {userData && (
+                <Text style={styles.ownerName}>
+                  Por {userData.name} {userData.last_name}
+                </Text>
+              )}
+              {catalogData.descripcion && (
+                <Text style={styles.storeDescription}>{catalogData.descripcion}</Text>
+              )}
+
+              {/* Información de contacto */}
+              <View style={styles.contactInfo}>
+                {catalogData.telefono && (
                   <TouchableOpacity 
-                    style={styles.removeImageButton} 
-                    onPress={() => handleInputChange('imagenPortada', '')}
+                    style={styles.contactItem}
+                    onPress={() => handleContactClick('phone')}
                   >
-                    <Text style={styles.removeImageText}>Quitar imagen</Text>
+                    <Icon name="phone" size={16} color="#6B7280" />
+                    <Text style={styles.contactText}>{catalogData.telefono}</Text>
+                  </TouchableOpacity>
+                )}
+                {catalogData.email && (
+                  <TouchableOpacity 
+                    style={styles.contactItem}
+                    onPress={() => handleContactClick('email')}
+                  >
+                    <Icon name="mail" size={16} color="#6B7280" />
+                    <Text style={styles.contactText}>{catalogData.email}</Text>
+                  </TouchableOpacity>
+                )}
+                {catalogData.sitioWeb && (
+                  <TouchableOpacity 
+                    style={styles.contactItem}
+                    onPress={() => Linking.openURL(
+                      catalogData.sitioWeb.startsWith('http') 
+                        ? catalogData.sitioWeb 
+                        : `https://${catalogData.sitioWeb}`
+                    )}
+                  >
+                    <Icon name="globe" size={16} color="#2563EB" />
+                    <Text style={[styles.contactText, styles.websiteText]}>Sitio web</Text>
+                    <Icon name="external-link" size={12} color="#2563EB" />
                   </TouchableOpacity>
                 )}
               </View>
-            </View>
 
-            {/* Campos de texto */}
-            <View style={styles.inputGroup}>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Título del Catálogo</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Ej: Ferretería de Juan"
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.nombreTienda}
-                  onChangeText={(value) => handleInputChange('nombreTienda', value)}
-                />
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Descripción (Opcional)</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Describe tu negocio en pocas palabras..."
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.descripcion}
-                  onChangeText={(value) => handleInputChange('descripcion', value)}
-                  multiline={true}
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Número de Contacto</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="+54 9 11 1234-5678"
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.telefono}
-                  onChangeText={(value) => handleInputChange('telefono', value)}
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="contacto@mineogcio.com"
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.email}
-                  onChangeText={(value) => handleInputChange('email', value)}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Sitio Web (Opcional)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="www.mipagina.com"
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.sitioWeb}
-                  onChangeText={(value) => handleInputChange('sitioWeb', value)}
-                  keyboardType="url"
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Referencias (Opcional)</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Información adicional, horarios de atención, ubicación, etc..."
-                  placeholderTextColor="#9CA3AF"
-                  value={catalogoData.referencias}
-                  onChangeText={(value) => handleInputChange('referencias', value)}
-                  multiline={true}
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              </View>
-            </View>
-
-            {/* Selección de Productos */}
-            {productos.length >= 0 && (
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Mis Productos</Text>
-                <Text style={styles.fieldSubtitle}>Selecciona los productos que quieres mostrar</Text>
-                <View style={styles.productsList}>
-                  {productos.map((producto) => (
-                    <TouchableOpacity
-                      key={producto.id}
-                      style={[
-                        styles.productItem,
-                        productosSeleccionados.find(p => p.id === producto.id) && styles.productItemSelected
-                      ]}
-                      onPress={() => toggleProducto(producto.id)}
-                    >
-                      <View style={styles.productInfo}>
-                        <Text style={styles.productName}>{producto.nombre}</Text>
-                        <Text style={styles.productPrice}>{producto.precio}</Text>
-                      </View>
-                      <Icon 
-                        name={productosSeleccionados.find(p => p.id === producto.id) ? "check-circle" : "circle"} 
-                        size={20} 
-                        color={productosSeleccionados.find(p => p.id === producto.id) ? "#133A7D" : "#9CA3AF"} 
-                      />
-                    </TouchableOpacity>
-                  ))}
+              {/* Referencias adicionales */}
+              {catalogData.referencias && (
+                <View style={styles.referencesContainer}>
+                  <Text style={styles.referencesTitle}>Información adicional</Text>
+                  <Text style={styles.referencesText}>{catalogData.referencias}</Text>
                 </View>
-              </View>
-            )}
-          </View>
-
-          {/* Sección 2: URL del Catálogo */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Tu Catálogo Público</Text>
-            
-            <View style={styles.urlContainer}>
-              <View style={styles.urlBox}>
-                <Text style={styles.urlText}>{catalogoUrl}</Text>
-                <TouchableOpacity style={styles.copyButton} onPress={handleCopiarUrl}>
-                  <Icon name="copy" size={16} color="#133A7D" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.urlNote}>
-                Comparte este enlace con tus clientes para que vean tu catálogo
-              </Text>
-            </View>
-          </View>
-
-          {/* Botón Guardar */}
-          <TouchableOpacity style={styles.saveButton} onPress={handleGuardar}>
-            <Text style={styles.saveButtonText}>Guardar Catálogo</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-
-      {/* Modal para URL de imagen */}
-      <Modal
-        visible={showImageModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={handleCancelarImagen}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Imagen de Portada</Text>
-            <Text style={styles.modalSubtitle}>
-              Ingresa la URL de la imagen que quieres usar como portada:
-            </Text>
-            
-            <TextInput
-              style={styles.modalInput}
-              placeholder="https://ejemplo.com/imagen.jpg"
-              placeholderTextColor="#9CA3AF"
-              value={tempImageUrl}
-              onChangeText={setTempImageUrl}
-              autoCapitalize="none"
-              keyboardType="url"
-              multiline={true}
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalButtonCancel} onPress={handleCancelarImagen}>
-                <Text style={styles.modalButtonCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleConfirmarImagen}>
-                <Text style={styles.modalButtonConfirmText}>Agregar</Text>
-              </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
-      </Modal>
+
+        {/* Sección de productos */}
+        <View style={styles.productsSection}>
+          <Text style={styles.productsTitle}>
+            Productos {products.length > 0 && `(${products.length})`}
+          </Text>
+
+          {products.length === 0 ? (
+            <View style={styles.noProductsContainer}>
+              <Text style={styles.noProductsEmoji}>📦</Text>
+              <Text style={styles.noProductsTitle}>No hay productos disponibles</Text>
+              <Text style={styles.noProductsMessage}>
+                Este catálogo aún no tiene productos publicados.
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* Filtro de categorías */}
+              {categories.length > 1 && (
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.categoriesContainer}
+                >
+                  {categories.map((category) => (
+                    <TouchableOpacity
+                      key={category}
+                      onPress={() => setSelectedCategory(category || 'Todos')}
+                      style={[
+                        styles.categoryButton,
+                        selectedCategory === category && styles.categoryButtonActive
+                      ]}
+                    >
+                      <Text style={[
+                        styles.categoryButtonText,
+                        selectedCategory === category && styles.categoryButtonTextActive
+                      ]}>
+                        {category}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+
+              {/* Grid de productos */}
+              <FlatList
+                data={filteredProducts}
+                renderItem={renderProduct}
+                numColumns={2}
+                columnWrapperStyle={styles.productRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+              />
+
+              {filteredProducts.length === 0 && selectedCategory !== 'Todos' && (
+                <View style={styles.noCategoryProductsContainer}>
+                  <Text style={styles.noCategoryProductsText}>
+                    No hay productos en la categoría "{selectedCategory}".
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Catálogo creado con Tango Shop</Text>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A1F44',
+    backgroundColor: '#F9FAFB',
   },
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    zIndex: 10,
-  },
-  backButtonCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  contentContainer: {
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  errorContainer: {
     flex: 1,
-    backgroundColor: '#0A1F44',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
   },
-  scrollContainer: {
-    flex: 1,
+  errorEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
   },
-  scrollContentContainer: {
-    padding: 20,
-    paddingBottom: 100,
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 8,
+    textAlign: 'center',
   },
-  section: {
+  errorMessage: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  backButton: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  header: {
     backgroundColor: '#FFFFFF',
-    marginBottom: 20,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
   },
-  sectionTitle: {
-    fontSize: 20,
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerText: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 20,
-    fontFamily: 'Inter',
   },
-  imageSection: {
-    marginBottom: 20,
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
   },
-  fieldLabel: {
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  shareButton: {
+    backgroundColor: '#F3F4F6',
+    padding: 8,
+    borderRadius: 8,
+  },
+  contactButton: {
+    backgroundColor: '#16A34A',
+    padding: 8,
+    borderRadius: 8,
+  },
+  content: {
+    flex: 1,
+  },
+  profileSection: {
+    backgroundColor: '#FFFFFF',
+    margin: 16,
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  profileContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  avatarContainer: {
+    marginRight: 16,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#2563EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  storeName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  ownerName: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  storeDescription: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  contactInfo: {
+    gap: 8,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  contactText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  websiteText: {
+    color: '#2563EB',
+  },
+  referencesContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+  },
+  referencesTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-    fontFamily: 'Inter',
+    color: '#1F2937',
+    marginBottom: 4,
   },
-  fieldSubtitle: {
+  referencesText: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  productsSection: {
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
+  productsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
+  noProductsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 48,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  noProductsEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  noProductsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  noProductsMessage: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  categoriesContainer: {
+    marginBottom: 16,
+  },
+  categoryButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  categoryButtonActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+  categoryButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  categoryButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  productRow: {
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  productCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    overflow: 'hidden',
+    width: (width - 48) / 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  productImageContainer: {
+    position: 'relative',
+    aspectRatio: 1,
+    backgroundColor: '#F3F4F6',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+  },
+  noImageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noImageText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 8,
+  },
+  categoryBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  categoryText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  productInfo: {
+    padding: 12,
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  productDescription: {
     fontSize: 12,
     color: '#6B7280',
     marginBottom: 12,
-    fontFamily: 'Inter',
+    lineHeight: 16,
   },
-  imageUpload: {
-    height: 120,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  placeholderImage: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 8,
-    fontFamily: 'Inter',
-    textAlign: 'center',
-  },
-  uploadedImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 10,
-  },
-  removeImageButton: {
-    marginTop: 8,
-    alignSelf: 'center',
-  },
-  removeImageText: {
-    fontSize: 14,
-    color: '#EF4444',
-    fontFamily: 'Inter',
-  },
-  inputGroup: {
-    gap: 16,
-  },
-  fieldContainer: {
-    marginBottom: 16,
-  },
-  input: {
-    height: 48,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontWeight: '400',
-    color: '#374151',
-    fontFamily: 'Inter',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-    paddingTop: 12,
-  },
-  productsList: {
-    gap: 8,
-  },
-  productItem: {
+  productFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    backgroundColor: '#F9FAFB',
-  },
-  productItemSelected: {
-    borderColor: '#133A7D',
-    backgroundColor: '#EBF4FF',
-  },
-  productInfo: {
-    flex: 1,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#374151',
-    fontFamily: 'Inter',
   },
   productPrice: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2563EB',
   },
-  urlContainer: {
-    alignItems: 'center',
+  consultButton: {
+    backgroundColor: '#16A34A',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
-  urlBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    width: '100%',
-  },
-  urlText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#374151',
-    fontFamily: 'Inter',
-  },
-  copyButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  urlNote: {
+  consultButtonText: {
+    color: '#FFFFFF',
     fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-    fontFamily: 'Inter',
-  },
-  saveButton: {
-    backgroundColor: '#133A7D',
-    height: 52,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    shadowColor: '#133A7D',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  saveButtonText: {
-    fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
-    fontFamily: 'Inter',
   },
-  // Estilos del Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
+  noCategoryProductsContainer: {
+    paddingVertical: 48,
     alignItems: 'center',
-    padding: 20,
   },
-  modalContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 8,
-    textAlign: 'center',
-    fontFamily: 'Inter',
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 20,
-    textAlign: 'center',
-    lineHeight: 20,
-    fontFamily: 'Inter',
-  },
-  modalInput: {
-    height: 80,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+  noCategoryProductsText: {
     fontSize: 16,
-    fontWeight: '400',
-    color: '#374151',
-    fontFamily: 'Inter',
-    marginBottom: 24,
-    textAlignVertical: 'top',
+    color: '#9CA3AF',
   },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
+  footer: {
+    paddingVertical: 24,
+    alignItems: 'center',
   },
-  modalButtonCancel: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  modalButtonCancelText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6B7280',
-    textAlign: 'center',
-    fontFamily: 'Inter',
-  },
-  modalButtonConfirm: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: '#133A7D',
-  },
-  modalButtonConfirmText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    fontFamily: 'Inter',
+  footerText: {
+    fontSize: 12,
+    color: '#9CA3AF',
   },
 });
-
-export default MiCatalogo;

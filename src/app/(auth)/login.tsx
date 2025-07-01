@@ -1,7 +1,7 @@
 import FormComponent from '@/src/components/Form';
-import CustomPopup from './CustomPopup';
 import imagePath from '@/src/constants/imagePath';
 import useAxios from '@/src/hooks/useFetch';
+import useStore from '@/src/hooks/useStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -11,6 +11,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import CustomPopup from './CustomPopup';
 
 interface PopupState {
   visible: boolean;
@@ -22,6 +23,7 @@ interface PopupState {
 
 const LoginScreen = () => {
   const { execute, loading } = useAxios();
+  const { save: saveToStorage } = useStore(); // Usar hook correctamente
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [popup, setPopup] = useState<PopupState>({
     visible: false,
@@ -89,7 +91,18 @@ const LoginScreen = () => {
         // Guardar datos del usuario en AsyncStorage
         await AsyncStorage.setItem('currentUser', JSON.stringify(response.ok.data));
         
-        showPopup(
+        // Guardar token si existe
+        if (response.ok.data.token) {
+          await AsyncStorage.setItem('authToken', response.ok.data.token);
+        }
+        
+        // Guardar en Storage local (Zustand) - CORREGIDO
+        saveToStorage({ 
+          currentUser: response.ok.data,
+          authToken: response.ok.data.token || null
+        });
+        
+        Alert.alert(
           'Login Exitoso',
           `¡Bienvenido de vuelta, ${response.ok.data.name}!`,
           'success',
