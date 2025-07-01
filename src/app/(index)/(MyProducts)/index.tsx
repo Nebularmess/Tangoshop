@@ -9,11 +9,11 @@ import FilterPopup from '../../../components/products/FilterPopUp';
 import SearchBar from '../../../components/products/productsSearchBar';
 import usefetch from "../../../hooks/useFetch";
 import {
-    getFilteredProductsWithFavorites,
-    getSavedProducts,
-    ProductFilters,
-    searchFilteredProductsWithFavorites,
-    searchProductsWithFavorites
+  getFilteredProductsWithFavorites,
+  getSavedProducts,
+  ProductFilters,
+  searchFilteredProductsWithFavorites,
+  searchProductsWithFavorites
 } from '../../../utils/queryProduct';
 
 // Interface para el producto del backend (misma estructura que el index)
@@ -347,7 +347,7 @@ const FavoritesIndex = () => {
         
         {/* Mostrar contador de favoritos */}
         {productos.length > 0 && (
-          <View style={styles.counterContainer}>
+          <View style={styles.counterContainer} className='mt-3 shadow-lg'>
             <Text style={styles.counterText}>
               {productosFiltrados.length} de {productos.length} favoritos
               {searchQuery.trim() && ` para "${searchQuery}"`}
@@ -370,6 +370,7 @@ const FavoritesIndex = () => {
             : "No tienes productos favoritos aún"
           }
         />
+
 
         <FilterPopup
           visible={isFilterPopupVisible}
@@ -480,6 +481,31 @@ const styles = StyleSheet.create({
     color: '#D32F2F',
     textAlign: 'center',
     textDecorationLine: 'underline',
+  },
+  // Nuevos estilos para el botón de calculadora
+  surchargeButtonContainer: {
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
+  surchargeButton: {
+    backgroundColor: '#059669',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  surchargeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
 

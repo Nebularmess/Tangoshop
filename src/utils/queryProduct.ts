@@ -168,7 +168,8 @@ export const getProductById = (userId: string, productId: string): object[] => {
           },
           {
             "$project": {
-              "_id": 1
+              "_id": 1,
+              "props": 1
             }
           }
         ],
