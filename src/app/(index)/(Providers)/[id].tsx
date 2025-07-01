@@ -82,7 +82,7 @@ const ProviderDetailScreen = () => {
       fetchProducts({ 
         method: 'post', 
         url: '/api/findObjects', 
-        data: getProductsByProvider(id as string) 
+        data: getProductsByProvider("12", id as string) 
       });
     }
   }, [id]);

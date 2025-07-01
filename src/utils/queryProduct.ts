@@ -1,5 +1,28 @@
 // queryProduct.ts
 
+export const getNewProvider = (id: string) =>{
+  return[
+  {
+    "$lookup": {
+      "from": "objecttypes",
+      "localField": "type",
+      "foreignField": "_id",
+      "as": "object_type"
+    }
+  },
+  {
+    "$unwind": "$object_type"
+  },
+  {
+    "$match": {
+      "object_type.parent": "product",
+      "status": "active",
+      "owner": id
+    }
+  }
+]
+}
+
 interface ProductFilters {
   categories?: string[];
   priceRanges?: string[];
