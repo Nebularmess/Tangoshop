@@ -1,18 +1,18 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { ScrollView, SafeAreaView, View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import ProductCard from '../(home)/components/ProductCard';
+import ActionButtons from '../../../components/ProviderComponent/ActionButtons';
 import CardContainer from '../../../components/ProviderComponent/CardContainer';
+import CatalogFilter from '../../../components/ProviderComponent/CatalogFilter';
+import DescriptionSection from '../../../components/ProviderComponent/DescriptionSection';
 import ProviderHeader from '../../../components/ProviderComponent/ProviderHeader';
 import ProviderInfo from '../../../components/ProviderComponent/ProviderInfo';
-import DescriptionSection from '../../../components/ProviderComponent/DescriptionSection';
-import ActionButtons from '../../../components/ProviderComponent/ActionButtons';
 import SectionHeader from '../../../components/ProviderComponent/SectionHeader';
-import ProductCard from '../../../components/ProductComponent/ProductCard';
-import CatalogFilter from '../../../components/ProviderComponent/CatalogFilter';
 import usefetch from "../../../hooks/useFetch";
-import { getProviderById } from '../../../utils/queryProv';
 import { getProductsByProvider } from '../../../utils/queryProduct';
+import { getProviderById } from '../../../utils/queryProv';
 
 interface Provider {
   _id: string;
