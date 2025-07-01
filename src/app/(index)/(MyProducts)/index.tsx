@@ -353,7 +353,7 @@ const FavoritesIndex = () => {
         
         {/* Mostrar contador de favoritos */}
         {productos.length > 0 && (
-          <View style={styles.counterContainer}>
+          <View style={styles.counterContainer} className='mt-3 shadow-lg'>
             <Text style={styles.counterText}>
               {productosFiltrados.length} de {productos.length} favoritos
               {searchQuery.trim() && ` para "${searchQuery}"`}

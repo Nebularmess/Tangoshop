@@ -12,10 +12,12 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
 import usefetch from "../../../hooks/useFetch";
+import useStorage from "../../../hooks/useStorage";
 import { getProductById } from '../../../utils/queryProduct';
 
 // Interface para el producto del backend (DEBE COINCIDIR con la del index)
@@ -34,6 +36,10 @@ interface BackendProduct {
   published: string;
   saved_product: {
     _id: string;
+    props: {
+      type_of_profit: "mount" | "percentage",
+      value: number
+    }
   }[]; // Array vacío = no guardado, con elementos = guardado
   object_type?: {
     _id: string;
@@ -54,35 +60,70 @@ interface ProductApiResponse {
 
 // Obtener dimensiones de la pantalla
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 const StarRating: React.FC<{ rating: number; maxStars?: number }> = ({ rating, maxStars = 5 }) => {
-    return (
-        <View style={styles.starsContainer}>
-            {[...Array(maxStars)].map((_, index) => (
-                <Ionicons
-                    key={index}
-                    name={index < rating ? "star" : "star-outline"}
-                    size={20}
-                    color={index < rating ? "#2563EB" : "#D1D5DB"}
-                    style={styles.star}
-                />
-            ))}
-        </View>
-    );
+  return (
+    <View style={styles.starsContainer}>
+      {[...Array(maxStars)].map((_, index) => (
+        <Ionicons
+          key={index}
+          name={index < rating ? "star" : "star-outline"}
+          size={20}
+          color={index < rating ? "#2563EB" : "#D1D5DB"}
+          style={styles.star}
+        />
+      ))}
+    </View>
+  );
 };
+
+interface ResApi {
+  path: string;
+  method: string;
+  error?: any;
+  item?: any;
+}
 
 export default function ProductoDetalle() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  
+  const { get } = useStorage();
+  const currentUser = get().currentUser;
+
+  const { execute, error: errorFetch } = usefetch<ResApi>();
+
   // Estados
   const [producto, setProducto] = useState<BackendProduct | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isImageModalVisible, setIsImageModalVisible] = useState<boolean>(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [savedId, setSavedId] = useState('');
+  const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
+
+  const [profitType, setProfitType] = useState<'mount' | 'percentage'>('mount');
+  const [profitValue, setProfitValue] = useState<number>(0);
+  const [savingProfit, setSavingProfit] = useState(false);
+
 
   // Hook para obtener datos del backend
   const { data: productData, execute: fetchProduct, loading: loadingProduct } = usefetch<ProductApiResponse>();
+
+  useEffect(() => {
+    if (producto) {
+      const saved = producto.saved_product?.[0];
+      const savedStatus = !!saved;
+      setIsSaved(savedStatus);
+      setSavedId(savedStatus ? saved._id : '');
+
+      if (saved?.props) {
+        setProfitType(saved.props.type_of_profit);
+        setProfitValue(saved.props.value);
+      }
+    }
+  }, [producto]);
+
 
   // Obtener userData del AsyncStorage
   useEffect(() => {
@@ -110,9 +151,9 @@ export default function ProductoDetalle() {
   useEffect(() => {
     if (userId && id && typeof id === 'string') {
       console.log('🔄 Cargando producto:', id, 'para usuario:', userId);
-      fetchProduct({ 
-        method: 'post', 
-        url: '/api/findObjects', 
+      fetchProduct({
+        method: 'post',
+        url: '/api/findObjects',
         data: getProductById(userId, id)
       });
     } else if (!userId) {
@@ -122,6 +163,15 @@ export default function ProductoDetalle() {
       setError('ID de producto inválido');
     }
   }, [userId, id]);
+
+  // Sincronizar estado de favoritos cuando cambia el producto
+  useEffect(() => {
+    if (producto) {
+      const savedStatus = (producto.saved_product || []).length > 0;
+      setIsSaved(savedStatus);
+      setSavedId(savedStatus ? producto.saved_product[0]._id : '');
+    }
+  }, [producto]);
 
   // Efecto para procesar datos cuando llegan del backend
   useEffect(() => {
@@ -139,18 +189,67 @@ export default function ProductoDetalle() {
   }, [productData]);
 
   // Manejar toggle de favorito
-  const handleToggleFavorite = () => {
-    if (producto) {
-      setProducto(prev => 
-        prev ? { 
-          ...prev, 
-          saved_product: prev.saved_product.length > 0 ? [] : [{ _id: 'temp' }]
-        } : null
-      );
-      
-      // Aquí implementarías la llamada al backend para guardar/quitar favoritos
-      const isFavorite = producto.saved_product.length > 0;
-      console.log(isFavorite ? '🗑️ Quitando de favoritos' : '❤️ Agregando a favoritos', producto._id);
+  const handleToggleFavorite = async () => {
+    if (!producto || !currentUser?._id || isLoadingFavorite) {
+      console.log("No hay producto, usuario logueado o ya está en proceso");
+      return;
+    }
+
+    setIsLoadingFavorite(true);
+
+    try {
+      if (!isSaved) {
+        // Agregar a favoritos
+        const relation = {
+          type: "saved_product",
+          from: currentUser._id,
+          to: producto._id,
+          tags: [currentUser.email],
+          props: {
+            type_of_profit: "mount",
+            value: 0,
+          },
+        };
+
+        const result = await execute({
+          method: 'post',
+          url: '/api/createRelation',
+          data: relation,
+        });
+
+        if (result?.item?._id) {
+          // Actualizar el estado local del producto
+          setProducto(prev => prev ? {
+            ...prev,
+            saved_product: result.item
+          } : null);
+        } else {
+          console.log("No se pudo guardar el producto:", errorFetch);
+        }
+      } else {
+        // Eliminar de favoritos
+        if (savedId) {
+          const result = await execute({
+            method: 'delete',
+            url: `/api/deleteRelation/${savedId}`,
+            data: {},
+          });
+
+          if (result?.item?._id) {
+            // Actualizar el estado local del producto
+            setProducto(prev => prev ? {
+              ...prev,
+              saved_product: []
+            } : null);
+          } else {
+            console.log("No se pudo eliminar el producto:", errorFetch);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error en handleToggleFavorite:", error);
+    } finally {
+      setIsLoadingFavorite(false);
     }
   };
 
@@ -195,21 +294,18 @@ export default function ProductoDetalle() {
 
   const navigateImage = (direction: 'prev' | 'next') => {
     if (!producto?.props?.images || selectedImageIndex === null) return;
-    
+
     const totalImages = producto.props.images.length;
     let newIndex = selectedImageIndex;
-    
+
     if (direction === 'next') {
       newIndex = (selectedImageIndex + 1) % totalImages;
     } else {
       newIndex = selectedImageIndex === 0 ? totalImages - 1 : selectedImageIndex - 1;
     }
-    
+
     setSelectedImageIndex(newIndex);
   };
-
-  // Determinar si está en favoritos
-  const isFavorite = producto?.saved_product && producto.saved_product.length > 0;
 
   // Componente de Loading
   const LoadingComponent = () => (
@@ -225,13 +321,13 @@ export default function ProductoDetalle() {
       <Ionicons name="alert-circle-outline" size={64} color="#E53E3E" />
       <Text style={styles.errorTitle}>Error al cargar producto</Text>
       <Text style={styles.errorText}>{error}</Text>
-      <TouchableOpacity 
-        style={styles.retryButton} 
+      <TouchableOpacity
+        style={styles.retryButton}
         onPress={() => {
           if (userId && id && typeof id === 'string') {
-            fetchProduct({ 
-              method: 'post', 
-              url: '/api/findObjects', 
+            fetchProduct({
+              method: 'post',
+              url: '/api/findObjects',
               data: getProductById(userId, id)
             });
           }
@@ -260,44 +356,95 @@ export default function ProductoDetalle() {
     );
   }
 
+  const handleSaveProfit = async () => {
+    if (!savedId || !profitType || isNaN(profitValue)) return;
+
+    setSavingProfit(true);
+    try {
+      const res = await execute({
+        method: 'put',
+        url: `/api/updateRelation/${savedId}`,
+        data: {
+          props: {
+            type_of_profit: profitType,
+            value: profitValue
+          }
+        }
+      });
+
+      if (res?.item?._id) {
+        console.log("✅ Ganancia actualizada");
+        setProducto(prev =>
+          prev
+            ? {
+              ...prev,
+              saved_product: [
+                {
+                  ...prev.saved_product[0],
+                  props: {
+                    type_of_profit: profitType,
+                    value: profitValue
+                  }
+                }
+              ]
+            }
+            : null
+        );
+      } else {
+        console.error("❌ No se pudo actualizar");
+      }
+    } catch (err) {
+      console.error("❌ Error al guardar ganancia:", err);
+    } finally {
+      setSavingProfit(false);
+    }
+  };
+
+
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#2563EB" />
-      
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header con imagen de fondo - similar al de proveedores */}
         <View style={styles.headerContainer}>
           <Image
-            source={{ 
+            source={{
               uri: getImageUri() || 'https://via.placeholder.com/400x250/2563EB/ffffff?text=Producto'
             }}
             style={styles.headerImage}
             resizeMode="cover"
           />
           <View style={styles.headerOverlay} />
-          
+
           {/* Botones de navegación */}
           <View style={styles.headerButtons}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
               onPress={() => router.back()}
             >
               <Ionicons name="arrow-back" size={24} color="white" />
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.favoriteButton}
               onPress={handleToggleFavorite}
+              disabled={isLoadingFavorite}
             >
-              <Ionicons 
-                name={isFavorite ? "heart" : "heart-outline"} 
-                size={24} 
-                color={isFavorite ? "#FF4444" : "white"} 
-              />
+              {isLoadingFavorite ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Ionicons
+                  name={isSaved ? "heart" : "heart-outline"}
+                  size={24}
+                  color={isSaved ? "#FF4444" : "white"}
+                />
+              )}
             </TouchableOpacity>
           </View>
 
           {/* Logo/Imagen circular del producto */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.logoContainer}
             onPress={() => {
               console.log('🖼️ Tocando logo del producto');
@@ -306,7 +453,7 @@ export default function ProductoDetalle() {
             activeOpacity={0.8}
           >
             <Image
-              source={{ 
+              source={{
                 uri: getImageUri() || 'https://via.placeholder.com/100x100/F3F4F6/6B7280?text=P'
               }}
               style={styles.logoImage}
@@ -320,7 +467,7 @@ export default function ProductoDetalle() {
           {/* Información básica del producto */}
           <View style={styles.productInfoContainer}>
             <Text style={styles.productTitle}>{producto.name}</Text>
-            
+
             {/* Precio */}
             <View style={styles.priceContainer}>
               <Ionicons name="cash-outline" size={20} color="#2563EB" />
@@ -421,6 +568,90 @@ export default function ProductoDetalle() {
           </View>
         </View>
 
+        {isSaved && (
+          <View className="bg-white rounded-xl mx-4 mt-4 p-4 shadow">
+            <Text className="text-lg font-bold text-gray-800 mb-2">Editar ganancia</Text>
+
+            {/* Select de tipo de ganancia */}
+            <Text className="text-sm font-medium text-gray-600 mb-1">Tipo de ganancia</Text>
+            <View className="flex-row gap-3 mb-3">
+              {['mount', 'percentage'].map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  className={`px-4 py-2 rounded-full ${profitType === type ? 'bg-blue-600' : 'bg-gray-200'
+                    }`}
+                  onPress={() => setProfitType(type as 'mount' | 'percentage')}
+                >
+                  <Text
+                    className={`text-sm ${profitType === type ? 'text-white' : 'text-gray-700'
+                      }`}
+                  >
+                    {type === 'mount' ? 'Monto fijo' : 'Porcentaje'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Input numérico para el valor */}
+            <Text className="text-sm font-medium text-gray-600 mb-1">Valor</Text>
+            <View className="flex-row items-center bg-gray-100 rounded-lg px-3 py-2 mb-4">
+              <Text className="text-gray-400 text-base mr-1">
+                {profitType === 'percentage' ? '%' : '$'}
+              </Text>
+              <TextInput
+                className="flex-1 text-base text-gray-800"
+                keyboardType="numeric"
+                value={profitValue.toString()}
+                onChangeText={(text) => setProfitValue(Number(text))}
+                placeholder="0"
+              />
+            </View>
+
+            {/* Cálculo resumen */}
+            <View className="bg-blue-50 border border-blue-200 rounded-md px-3 py-2 mb-4">
+              <Text className="text-sm text-gray-600">
+                Precio base: <Text className="font-semibold">${producto.props.price}</Text>
+              </Text>
+              <Text className="text-sm text-gray-600">
+                Ganancia:{" "}
+                <Text className="font-semibold">
+                  {profitType === 'percentage'
+                    ? `${profitValue}% → $${((producto.props.price * profitValue) / 100).toFixed(2)}`
+                    : `$${profitValue.toFixed(2)}`}
+                </Text>
+              </Text>
+              <Text className="text-sm text-gray-600">
+                Precio final:{" "}
+                <Text className="font-semibold text-blue-600">
+                  $
+                  {(
+                    producto.props.price +
+                    (profitType === 'percentage'
+                      ? (producto.props.price * profitValue) / 100
+                      : profitValue)
+                  ).toFixed(2)}
+                </Text>
+              </Text>
+            </View>
+
+            {/* Botón para guardar */}
+            <TouchableOpacity
+              className="bg-blue-600 rounded-lg py-3"
+              onPress={handleSaveProfit}
+              disabled={savingProfit}
+            >
+              {savingProfit ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-center text-white font-semibold text-base">
+                  Guardar ganancia
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+
         {/* Espaciado inferior */}
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -434,16 +665,16 @@ export default function ProductoDetalle() {
       >
         <View style={styles.modalOverlay}>
           <StatusBar barStyle="light-content" backgroundColor="rgba(0, 0, 0, 0.9)" />
-          
+
           {/* Header del modal */}
           <View style={styles.modalHeader}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={closeImageModal}
             >
               <Ionicons name="close" size={28} color="white" />
             </TouchableOpacity>
-            
+
             {producto?.props?.images && (
               <Text style={styles.modalImageCounter}>
                 {(selectedImageIndex || 0) + 1} de {producto.props.images.length}
@@ -457,7 +688,7 @@ export default function ProductoDetalle() {
               <TouchableOpacity
                 style={styles.modalImageWrapper}
                 activeOpacity={1}
-                onPress={() => {/* Evitar cerrar al tocar la imagen */}}
+                onPress={() => {/* Evitar cerrar al tocar la imagen */ }}
               >
                 <Image
                   source={{ uri: producto.props.images[selectedImageIndex] }}
@@ -476,7 +707,7 @@ export default function ProductoDetalle() {
                 >
                   <Ionicons name="chevron-back" size={32} color="white" />
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={[styles.modalNavButton, styles.modalNavButtonRight]}
                   onPress={() => navigateImage('next')}
@@ -558,7 +789,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // Nuevos estilos siguiendo el patrón del proveedor
   headerContainer: {
     height: 250,
     position: 'relative',
@@ -768,7 +998,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginLeft: 16,
   },
-  // Estilos para el modal de imágenes
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
