@@ -318,15 +318,33 @@ const Index = () => {
   );
 
   const handleRefresh = async () => {
-    if (!userId) return;
-    
-    setIsRefreshing(true);
-    try {
-      await loadProductsWithFilters(activeFilters, searchQuery);
-    } finally {
-      setIsRefreshing(false);
+  if (!userId) return;
+
+  setIsRefreshing(true);
+  try {
+    const queryData = getProductsWithFavorites(userId);
+
+    const res = await fetchProducts({
+      method: 'post',
+      url: '/api/findObjects',
+      data: queryData
+    });
+
+    if (res?.items) {
+      setProductos(res.items);
+      applyLocalFilters(res.items, activeFilters);
+    } else {
+      setProductos([]);
+      setProductosFiltrados([]);
     }
-  };
+
+  } catch (err) {
+    console.error("❌ Error al refrescar:", err);
+  } finally {
+    setIsRefreshing(false);
+  }
+};
+
 
   const NoResultsComponent = () => (
     <View style={styles.noResultsContainer}>

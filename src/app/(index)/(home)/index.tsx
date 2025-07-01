@@ -74,18 +74,21 @@ const Index = () => {
   const router = useRouter();
   const { get } = useStore();
   const currentUser = get().currentUser
+
   const [refreshing, setRefreshing] = useState(false);
   const { data: categories, execute: fetchCategories, loading: loadingCategories } = usefetch<CategoriesRes>();
   const { data: providers, execute: fetchProviders, loading: loadingProviders } = usefetch<CommercesRes>();
   const { data: products, execute: fetchProducts, loading: loadingProducts } = usefetch<ProductsRes>();
 
   useEffect(() => {
+    if (!currentUser) return;
     fetchCategories({ method: 'post', url: '/api/findObjectsTypes', data: getCategories });
     fetchProviders({ method: 'post', url: '/api/findObjects', data: getProviders });
     fetchProducts({ method: 'post', url: '/api/findObjects', data: getProducts(currentUser._id) });
   }, [])
 
   const onRefresh = async () => {
+    if (!currentUser) return;
     setRefreshing(true);
     try {
       await Promise.all([
