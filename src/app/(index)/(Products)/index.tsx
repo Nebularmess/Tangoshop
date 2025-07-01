@@ -2,11 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import ProductCard from '../(home)/components/ProductCard';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
 import FilterPopup from '../../../components/products/FilterPopUp';
-//import ProductCard from '../../../components/products/ProductCard';
-import ProductCard from '../(home)/components/ProductCard';
 import SearchBar from '../../../components/products/productsSearchBar';
 import usefetch from "../../../hooks/useFetch";
 import {
@@ -162,12 +161,12 @@ const Index = () => {
         const price = producto.props?.price || 0;
         return filters.priceRanges!.some((range: string) => {
           switch (range) {
-            case '0-50':
-              return price >= 0 && price <= 50;
-            case '50-100':
-              return price > 50 && price <= 100;
-            case '100+':
-              return price > 100;
+            case '0-500.000':
+              return price >= 0 && price <= 500000;
+            case '500.000-1.000.000':
+              return price > 5000000 && price <= 1000000;
+            case '1.000.000+':
+              return price > 1000000;
             default:
               return true;
           }

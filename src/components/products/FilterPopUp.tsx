@@ -231,7 +231,7 @@ const FilterPopup: React.FC<FilterPopupProps> = ({
             {/* Categorías */}
             {renderFilterSection(
               'Categorías',
-              ['Producto Deportivo', 'Ropa e indumentaria', 'Tecnologia'],
+              ['Producto Deportivo', 'Ropa e indumentaria', 'Tecnología'],
               selectedFilters.categories || [],
               toggleCategory
             )}
@@ -261,7 +261,7 @@ const FilterPopup: React.FC<FilterPopupProps> = ({
             {/* Rango de precios */}
             {renderFilterSection(
               'Precio',
-              ['0-50', '50-100', '100+'],
+              ['0-500.000', '500.000-1.000.000', '1.000.000+'],
               selectedFilters.priceRanges || [],
               togglePriceRange
             )}
