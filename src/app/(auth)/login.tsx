@@ -102,7 +102,8 @@ const LoginScreen = () => {
           authToken: response.ok.data.token || null
         });
         
-        Alert.alert(
+        // FIXED: Use showPopup instead of Alert.alert
+        showPopup(
           'Login Exitoso',
           `¡Bienvenido de vuelta, ${response.ok.data.name}!`,
           'success',
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
     width: '100%',
-    height: '100%',
+    height: '100%',  
   },
   safeArea: {
     flex: 1,
