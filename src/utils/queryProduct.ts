@@ -5,402 +5,11 @@ interface ProductFilters {
   priceRanges?: string[];
   ratings?: string[];
   tags?: string[];
+  type?: string; // Añadir filtro por type específico
 }
 
-// Query para obtener todos los productos
-export const getProducts: object[] = [
-  {
-    "$lookup": {
-      "from": "objecttypes",
-      "localField": "type",
-      "foreignField": "_id",
-      "as": "object_type"
-    }
-  },
-  {
-    "$match": { 
-      "object_type.parent": "product",
-      "status": "active" // Solo productos activos
-    }
-  },
-  {
-    "$project": {
-      "name": 1,
-      "description": 1,
-      "image": 1, // Imagen principal (si existe)
-      "type": 1, // Categoría del producto
-      "props.price": 1, // Precio del producto
-      "props.images": { "$slice": ["$props.images", 1] }, // Solo la primera imagen del array
-      "object_type.name": 1, // Nombre de la categoría
-      "tags": 1 // Incluir tags
-    }
-  }
-];
-
-// Query para obtener productos por categoría específica
-export const getProductsByCategory = (categoryType: string): object[] => [
-  {
-    "$lookup": {
-      "from": "objecttypes",
-      "localField": "type",
-      "foreignField": "_id",
-      "as": "object_type"
-    }
-  },
-  {
-    "$match": { 
-      "object_type.parent": "product",
-      "type": categoryType,
-      "status": "active"
-    }
-  },
-  {
-    "$project": {
-      "name": 1,
-      "description": 1,
-      "image": 1,
-      "type": 1,
-      "props.price": 1,
-      "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1,
-      "tags": 1
-    }
-  }
-];
-
-// Query para obtener productos de un proveedor específico
-export const getProductsByProvider = (providerId: string): object[] => [
-  {
-    "$lookup": {
-      "from": "objecttypes",
-      "localField": "type",
-      "foreignField": "_id",
-      "as": "object_type"
-    }
-  },
-  {
-    "$match": { 
-      "object_type.parent": "product",
-      "owner": providerId,
-      "status": "active"
-    }
-  },
-  {
-    "$project": {
-      "name": 1,
-      "description": 1,
-      "image": 1,
-      "type": 1,
-      "props.price": 1,
-      "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1,
-      "tags": 1
-    }
-  }
-];
-
-// Query para obtener un producto específico por ID
-export const getProductById = (productId: string): object[] => [
-  {
-    "$lookup": {
-      "from": "objecttypes",
-      "localField": "type",
-      "foreignField": "_id",
-      "as": "object_type"
-    }
-  },
-  {
-    "$match": {
-      "$expr": {
-        "$eq": [{ "$toString": "$_id" }, productId]
-      },
-      "object_type.parent": "product"
-    }
-  },
-  {
-    "$project": {
-      "name": 1,
-      "description": 1,
-      "image": 1,
-      "type": 1,
-      "props": 1, // Todos los props para vista detallada
-      "object_type": 1, // Información completa de la categoría
-      "tags": 1,
-      "owner": 1
-    }
-  }
-];
-
-// Query para buscar productos por texto
-export const searchProducts = (searchText: string): object[] => [
-  {
-    "$lookup": {
-      "from": "objecttypes",
-      "localField": "type",
-      "foreignField": "_id",
-      "as": "object_type"
-    }
-  },
-  {
-    "$match": { 
-      "object_type.parent": "product",
-      "status": "active",
-      "$or": [
-        { "name": { "$regex": searchText, "$options": "i" } },
-        { "description": { "$regex": searchText, "$options": "i" } },
-        { "tags": { "$in": [new RegExp(searchText, "i")] } }
-      ]
-    }
-  },
-  {
-    "$project": {
-      "name": 1,
-      "description": 1,
-      "image": 1,
-      "type": 1,
-      "props.price": 1,
-      "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1,
-      "tags": 1
-    }
-  }
-];
-
-export const getSavedProducts = (userId: string): object[] => [
-  // Primero filtrar solo productos
-  {
-    "$lookup": {
-      "from": "objecttypes",
-      "localField": "type",
-      "foreignField": "_id",
-      "as": "object_type"
-    }
-  },
-  {
-    "$match": { 
-      "object_type.parent": "product",
-      "status": "active"
-    }
-  },
-  
-  {
-    "$lookup": {
-      "from": "objects", 
-      "let": { "productId": "$_id" },
-      "pipeline": [
-        {
-          "$match": {
-            "$expr": {
-              "$and": [
-                { "$eq": ["$type", "saved_product"] },
-                { "$eq": ["$from", userId] }, 
-                { "$eq": ["$to", "$$productId"] } 
-              ]
-            }
-          }
-        }
-      ],
-      "as": "saved_relation"
-    }
-  },
- 
-  {
-    "$match": {
-      "saved_relation": { "$ne": [] } 
-    }
-  },
-
-  {
-    "$project": {
-      "name": 1,
-      "description": 1,
-      "image": 1,
-      "type": 1,
-      "props.price": 1,
-      "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1,
-      "saved_relation": 1,
-      "tags": 1
-    }
-  }
-];
-
-export const searchSavedProducts = (userId: string, searchText: string): object[] => [
-  
-  {
-    "$lookup": {
-      "from": "objecttypes",
-      "localField": "type",
-      "foreignField": "_id",
-      "as": "object_type"
-    }
-  },
-  {
-    "$match": { 
-      "object_type.parent": "product",
-      "status": "active",
-     
-      "$or": [
-        { "name": { "$regex": searchText, "$options": "i" } },
-        { "description": { "$regex": searchText, "$options": "i" } },
-        { "tags": { "$in": [new RegExp(searchText, "i")] } }
-      ]
-    }
-  },
-  
-  {
-    "$lookup": {
-      "from": "objects",
-      "let": { "productId": "$_id" },
-      "pipeline": [
-        {
-          "$match": {
-            "$expr": {
-              "$and": [
-                { "$eq": ["$type", "saved_product"] },
-                { "$eq": ["$from", userId] },
-                { "$eq": ["$to", "$$productId"] }
-              ]
-            }
-          }
-        }
-      ],
-      "as": "saved_relation"
-    }
-  },
- 
-  {
-    "$match": {
-      "saved_relation": { "$ne": [] }
-    }
-  },
-  {
-    "$project": {
-      "name": 1,
-      "description": 1,
-      "image": 1,
-      "type": 1,
-      "props.price": 1,
-      "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1,
-      "saved_relation": 1,
-      "tags": 1
-    }
-  }
-];
-
-export const getProductsWithFavorites = (userId: string): object[] => [
-  {
-    "$lookup": {
-      "from": "objecttypes",
-      "localField": "type",
-      "foreignField": "_id",
-      "as": "object_type"
-    }
-  },
-  {
-    "$match": { 
-      "object_type.parent": "product",
-      "status": "active"
-    }
-  },
-  // JOIN con relaciones saved_product para este usuario
-  {
-    "$lookup": {
-      "from": "objects",
-      "let": { "productId": "$_id" },
-      "pipeline": [
-        {
-          "$match": {
-            "$expr": {
-              "$and": [
-                { "$eq": ["$type", "saved_product"] },
-                { "$eq": ["$from", userId] },
-                { "$eq": ["$to", "$$productId"] }
-              ]
-            }
-          }
-        }
-      ],
-      "as": "saved_by_user"
-    }
-  },
-  {
-    "$project": {
-      "name": 1,
-      "description": 1,
-      "image": 1,
-      "type": 1,
-      "props.price": 1,
-      "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1,
-      "saved_by_user": 1, // Array vacío = no guardado, con elementos = guardado
-      "tags": 1
-    }
-  }
-];
-
-// Query para buscar productos CON información de favoritos
-export const searchProductsWithFavorites = (userId: string, searchText: string): object[] => [
-  {
-    "$lookup": {
-      "from": "objecttypes",
-      "localField": "type",
-      "foreignField": "_id",
-      "as": "object_type"
-    }
-  },
-  {
-    "$match": { 
-      "object_type.parent": "product",
-      "status": "active",
-      "$or": [
-        { "name": { "$regex": searchText, "$options": "i" } },
-        { "description": { "$regex": searchText, "$options": "i" } },
-        { "tags": { "$in": [new RegExp(searchText, "i")] } }
-      ]
-    }
-  },
-  // JOIN con relaciones saved_product
-  {
-    "$lookup": {
-      "from": "objects",
-      "let": { "productId": "$_id" },
-      "pipeline": [
-        {
-          "$match": {
-            "$expr": {
-              "$and": [
-                { "$eq": ["$type", "saved_product"] },
-                { "$eq": ["$from", userId] },
-                { "$eq": ["$to", "$$productId"] }
-              ]
-            }
-          }
-        }
-      ],
-      "as": "saved_by_user"
-    }
-  },
-  {
-    "$project": {
-      "name": 1,
-      "description": 1,
-      "image": 1,
-      "type": 1,
-      "props.price": 1,
-      "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1,
-      "saved_by_user": 1,
-      "tags": 1
-    }
-  }
-];
-
-// NUEVAS QUERIES PARA FILTRADO AVANZADO
-
-// Query para filtrar productos con favoritos y filtros específicos
-export const getFilteredProductsWithFavorites = (userId: string, filters: ProductFilters): object[] => {
+// Query base siguiendo el patrón de tu amigo
+const baseProductQuery = (userId: string, typeFilter?: string, limit?: number) => {
   const pipeline: any[] = [
     {
       "$lookup": {
@@ -409,67 +18,302 @@ export const getFilteredProductsWithFavorites = (userId: string, filters: Produc
         "foreignField": "_id",
         "as": "object_type"
       }
+    },
+    {
+      "$unwind": "$object_type"
+    },
+    {
+      "$match": {
+        "object_type.parent": "product",
+        "status": "active"
+      }
     }
   ];
 
-  // Construir el match object
-  const matchConditions: any = {
-    "object_type.parent": "product",
-    "status": "active"
-  };
+  // Añadir filtro por type si se especifica
+  if (typeFilter) {
+    pipeline[2]["$match"]["type"] = typeFilter;
+  }
+
+  // Añadir limit si se especifica
+  if (limit) {
+    pipeline.push({ "$limit": limit });
+  }
+
+  pipeline.push(
+    {
+      "$addFields": {
+        "strId": {
+          "$toString": "$_id"
+        },
+        "userId": userId
+      }
+    },
+    {
+      "$lookup": {
+        "from": "relations",
+        "let": {
+          "userId": "$userId"
+        },
+        "localField": "strId",
+        "foreignField": "to",
+        "pipeline": [
+          {
+            "$match": {
+              "$expr": {
+                "$eq": [
+                  "$from",
+                  "$$userId"
+                ]
+              }
+            }
+          },
+          {
+            "$project": {
+              "_id": 1
+            }
+          }
+        ],
+        "as": "saved_product"
+      }
+    },
+    {
+      "$project": {
+        "name": 1,
+        "description": 1,
+        "type": 1,
+        "categorie": "$object_type.name",
+        "tags": 1,
+        "props": {
+          "price": 1,
+          "images": 1
+        },
+        "published": "$updatedAt",
+        "saved_product": 1
+      }
+    }
+  );
+
+  return pipeline;
+};
+
+// Query para obtener todos los productos con información de favoritos
+export const getProductsWithFavorites = (userId: string, typeFilter?: string): object[] => {
+  return baseProductQuery(userId, typeFilter);
+};
+
+// Query para obtener productos por categoría específica
+export const getProductsByCategory = (userId: string, categoryType: string): object[] => {
+  return baseProductQuery(userId, categoryType);
+};
+
+// Query para obtener productos de un proveedor específico
+export const getProductsByProvider = (userId: string, providerId: string): object[] => {
+  const pipeline = baseProductQuery(userId);
+  
+  // Modificar el match para incluir el owner
+  pipeline[2]["$match"]["owner"] = providerId;
+  
+  return pipeline;
+};
+
+// Query para obtener un producto específico por ID
+export const getProductById = (userId: string, productId: string): object[] => {
+  const pipeline: any[] = [
+    {
+      "$lookup": {
+        "from": "objecttypes",
+        "localField": "type",
+        "foreignField": "_id",
+        "as": "object_type"
+      }
+    },
+    {
+      "$unwind": "$object_type"
+    },
+    {
+      "$match": {
+        "$expr": {
+          "$eq": [{ "$toString": "$_id" }, productId]
+        },
+        "object_type.parent": "product"
+      }
+    },
+    {
+      "$addFields": {
+        "strId": {
+          "$toString": "$_id"
+        },
+        "userId": userId
+      }
+    },
+    {
+      "$lookup": {
+        "from": "relations",
+        "let": {
+          "userId": "$userId"
+        },
+        "localField": "strId",
+        "foreignField": "to",
+        "pipeline": [
+          {
+            "$match": {
+              "$expr": {
+                "$eq": [
+                  "$from",
+                  "$$userId"
+                ]
+              }
+            }
+          },
+          {
+            "$project": {
+              "_id": 1
+            }
+          }
+        ],
+        "as": "saved_product"
+      }
+    },
+    {
+      "$project": {
+        "name": 1,
+        "description": 1,
+        "type": 1,
+        "categorie": "$object_type.name",
+        "tags": 1,
+        "props": 1, // Todos los props para vista detallada
+        "object_type": 1, // Información completa de la categoría
+        "owner": 1,
+        "published": "$updatedAt",
+        "saved_product": 1
+      }
+    }
+  ];
+
+  return pipeline;
+};
+
+// Query para buscar productos por texto
+export const searchProductsWithFavorites = (userId: string, searchText: string, typeFilter?: string): object[] => {
+  const pipeline = baseProductQuery(userId, typeFilter);
+  
+  // Modificar el match para incluir la búsqueda
+  pipeline[2]["$match"]["$or"] = [
+    { "name": { "$regex": searchText, "$options": "i" } },
+    { "description": { "$regex": searchText, "$options": "i" } },
+    { "tags": { "$in": [new RegExp(searchText, "i")] } }
+  ];
+  
+  return pipeline;
+};
+
+// Query para obtener productos guardados/favoritos
+export const getSavedProducts = (userId: string): object[] => {
+  const pipeline: any[] = [
+    {
+      "$lookup": {
+        "from": "objecttypes",
+        "localField": "type",
+        "foreignField": "_id",
+        "as": "object_type"
+      }
+    },
+    {
+      "$unwind": "$object_type"
+    },
+    {
+      "$match": { 
+        "object_type.parent": "product",
+        "status": "active"
+      }
+    },
+    {
+      "$addFields": {
+        "strId": {
+          "$toString": "$_id"
+        },
+        "userId": userId
+      }
+    },
+    {
+      "$lookup": {
+        "from": "relations",
+        "let": {
+          "userId": "$userId"
+        },
+        "localField": "strId",
+        "foreignField": "to",
+        "pipeline": [
+          {
+            "$match": {
+              "$expr": {
+                "$eq": [
+                  "$from",
+                  "$$userId"
+                ]
+              }
+            }
+          },
+          {
+            "$project": {
+              "_id": 1
+            }
+          }
+        ],
+        "as": "saved_product"
+      }
+    },
+    {
+      "$match": {
+        "saved_product": { "$ne": [] } 
+      }
+    },
+    {
+      "$project": {
+        "name": 1,
+        "description": 1,
+        "type": 1,
+        "categorie": "$object_type.name",
+        "tags": 1,
+        "props": {
+          "price": 1,
+          "images": 1
+        },
+        "published": "$updatedAt",
+        "saved_product": 1
+      }
+    }
+  ];
+
+  return pipeline;
+};
+
+// Query para filtrar productos con favoritos y filtros específicos
+export const getFilteredProductsWithFavorites = (userId: string, filters: ProductFilters): object[] => {
+  const pipeline = baseProductQuery(userId, filters.type);
+
+  // Construir condiciones adicionales para el match
+  const additionalMatchConditions: any = {};
 
   // Filtro por tags
   if (filters.tags && filters.tags.length > 0) {
-    matchConditions["tags"] = {
+    additionalMatchConditions["tags"] = {
       "$in": filters.tags
     };
   }
 
-  // Filtro por categorías (tipos de objeto)
+  // Filtro por categorías (nombres de categoría)
   if (filters.categories && filters.categories.length > 0) {
-    matchConditions["object_type.name"] = {
+    additionalMatchConditions["object_type.name"] = {
       "$in": filters.categories
     };
   }
 
-  pipeline.push({ "$match": matchConditions });
-
-  // JOIN con relaciones saved_product
-  pipeline.push({
-    "$lookup": {
-      "from": "objects",
-      "let": { "productId": "$_id" },
-      "pipeline": [
-        {
-          "$match": {
-            "$expr": {
-              "$and": [
-                { "$eq": ["$type", "saved_product"] },
-                { "$eq": ["$from", userId] },
-                { "$eq": ["$to", "$$productId"] }
-              ]
-            }
-          }
-        }
-      ],
-      "as": "saved_by_user"
-    }
-  });
-
-  // Projection final
-  pipeline.push({
-    "$project": {
-      "name": 1,
-      "description": 1,
-      "image": 1,
-      "type": 1,
-      "props.price": 1,
-      "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1,
-      "saved_by_user": 1,
-      "tags": 1
-    }
-  });
+  // Si hay condiciones adicionales, añadirlas al match
+  if (Object.keys(additionalMatchConditions).length > 0) {
+    Object.assign(pipeline[2]["$match"], additionalMatchConditions);
+  }
 
   return pipeline;
 };
@@ -480,22 +324,18 @@ export const searchFilteredProductsWithFavorites = (
   searchText: string, 
   filters: ProductFilters
 ): object[] => {
-  const pipeline: any[] = [
-    {
-      "$lookup": {
-        "from": "objecttypes",
-        "localField": "type",
-        "foreignField": "_id",
-        "as": "object_type"
-      }
-    }
-  ];
+  const pipeline = baseProductQuery(userId, filters.type);
 
-  // Construir el match object
+  // Construir condiciones de búsqueda y filtros
   const matchConditions: any = {
     "object_type.parent": "product",
     "status": "active"
   };
+
+  // Añadir filtro por type si existe
+  if (filters.type) {
+    matchConditions["type"] = filters.type;
+  }
 
   // Búsqueda por texto
   if (searchText.trim()) {
@@ -506,7 +346,7 @@ export const searchFilteredProductsWithFavorites = (
     ];
   }
 
-  // Filtro por tags específicas (AND con la búsqueda de texto)
+  // Filtro por tags específicas
   if (filters.tags && filters.tags.length > 0) {
     matchConditions["tags"] = {
       "$in": filters.tags
@@ -520,48 +360,13 @@ export const searchFilteredProductsWithFavorites = (
     };
   }
 
-  pipeline.push({ "$match": matchConditions });
-
-  // JOIN con relaciones saved_product
-  pipeline.push({
-    "$lookup": {
-      "from": "objects",
-      "let": { "productId": "$_id" },
-      "pipeline": [
-        {
-          "$match": {
-            "$expr": {
-              "$and": [
-                { "$eq": ["$type", "saved_product"] },
-                { "$eq": ["$from", userId] },
-                { "$eq": ["$to", "$$productId"] }
-              ]
-            }
-          }
-        }
-      ],
-      "as": "saved_by_user"
-    }
-  });
-
-  pipeline.push({
-    "$project": {
-      "name": 1,
-      "description": 1,
-      "image": 1,
-      "type": 1,
-      "props.price": 1,
-      "props.images": { "$slice": ["$props.images", 1] },
-      "object_type.name": 1,
-      "saved_by_user": 1,
-      "tags": 1
-    }
-  });
+  // Reemplazar el match
+  pipeline[2]["$match"] = matchConditions;
 
   return pipeline;
 };
 
-// Query para obtener todas las tags únicas disponibles (para el filtro)
+// Query para obtener todas las tags únicas disponibles
 export const getAvailableTags = (): object[] => [
   {
     "$lookup": {
@@ -570,6 +375,9 @@ export const getAvailableTags = (): object[] => [
       "foreignField": "_id",
       "as": "object_type"
     }
+  },
+  {
+    "$unwind": "$object_type"
   },
   {
     "$match": { 
@@ -598,3 +406,6 @@ export const getAvailableTags = (): object[] => [
     }
   }
 ];
+
+// Exportar la interfaz actualizada
+export { ProductFilters };
