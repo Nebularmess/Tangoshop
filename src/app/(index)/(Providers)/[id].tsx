@@ -14,7 +14,7 @@ import usefetch from "../../../hooks/useFetch";
 import { getProviderById } from '../../../utils/queryProv';
 import { getProductsByProvider } from '../../../utils/queryProduct';
 
-// Interface para el proveedor completo (actualizada con nuevos campos)
+// Interface para el proveedor completo
 interface Provider {
   _id: string;
   name: string;
@@ -76,157 +76,6 @@ const ProviderDetailScreen = () => {
   // Hooks para obtener datos del backend
   const { data: providers, execute: fetchProvider, loading: loadingProvider, error: providerError } = usefetch<ProvidersApiResponse>();
   const { data: products, execute: fetchProducts, loading: loadingProducts } = usefetch<ProductsApiResponse>();
-
-  // ==================== COMPONENTES DE LOADING ====================
-  
-  // Skeleton para texto
-  const TextSkeleton: React.FC<{ width?: string; height?: string; className?: string }> = ({ 
-    width = 'w-full', 
-    height = 'h-4',
-    className = ''
-  }) => (
-    <View className={`${width} ${height} bg-gray-300 rounded animate-pulse ${className}`} />
-  );
-
-  // Skeleton para ProviderHeader
-  const ProviderHeaderSkeleton = () => (
-    <View style={{ height: showCatalog ? 200 : 250 }} className="bg-gray-300 animate-pulse">
-      {/* Skeleton del header con imagen de fondo */}
-      <View className="flex-1 bg-gray-300 relative">
-        {/* Logo skeleton superpuesto */}
-        <View className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 w-20 h-20 bg-gray-400 rounded-full border-4 border-white" />
-      </View>
-    </View>
-  );
-
-  // Skeleton para ProviderInfo
-  const ProviderInfoSkeleton = () => (
-    <View style={{ paddingTop: 60, paddingHorizontal: 16, paddingBottom: 16 }}>
-      {/* Nombre del proveedor */}
-      <View className="items-center mb-3">
-        <TextSkeleton width="w-48" height="h-6" className="mb-2" />
-      </View>
-      
-      {/* Industria */}
-      <View className="flex-row items-center justify-center mb-3">
-        <View className="w-4 h-4 bg-gray-300 rounded animate-pulse" />
-        <TextSkeleton width="w-32" height="h-4" className="ml-2" />
-      </View>
-      
-      {/* Dirección */}
-      <View className="flex-row items-center justify-center mb-4">
-        <View className="w-4 h-4 bg-gray-300 rounded animate-pulse" />
-        <TextSkeleton width="w-40" height="h-4" className="ml-2" />
-      </View>
-      
-      {/* Tags skeleton */}
-      <View className="flex-row flex-wrap justify-center mb-4">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <View key={index} className="bg-gray-200 px-3 py-1 rounded-full m-1 animate-pulse">
-            <TextSkeleton width="w-12" height="h-3" />
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-
-  // Skeleton para ActionButtons
-  const ActionButtonsSkeleton = () => (
-    <View className="px-4 pb-4">
-      <View className="flex-row justify-center space-x-4">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <View key={index} className="bg-gray-200 rounded-xl py-3 px-6 flex-row items-center animate-pulse">
-            <View className="w-5 h-5 bg-gray-300 rounded animate-pulse" />
-            <TextSkeleton width="w-16" height="h-4" className="ml-2" />
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-
-  // Skeleton para DescriptionSection
-  const DescriptionSkeleton = () => (
-    <CardContainer>
-      <View className="px-4 pt-4 pb-2">
-        <View className="flex-row items-center mb-3">
-          <View className="w-5 h-5 bg-gray-300 rounded animate-pulse" />
-          <TextSkeleton width="w-24" height="h-5" className="ml-2" />
-        </View>
-      </View>
-      <View className="px-4 pb-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <TextSkeleton key={index} width="w-full" height="h-4" className="mb-2" />
-        ))}
-        <TextSkeleton width="w-3/4" height="h-4" />
-      </View>
-    </CardContainer>
-  );
-
-  // Skeleton para información de contacto
-  const ContactInfoSkeleton = () => (
-    <CardContainer>
-      <View className="px-4 pt-4 pb-2">
-        <View className="flex-row items-center mb-3">
-          <View className="w-5 h-5 bg-gray-300 rounded animate-pulse" />
-          <TextSkeleton width="w-40" height="h-5" className="ml-2" />
-        </View>
-      </View>
-      
-      <View className="px-4 pb-4">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <View key={index} className="flex-row justify-between items-center py-3 border-b border-gray-100">
-            <TextSkeleton width="w-24" height="h-4" />
-            <TextSkeleton width="w-32" height="h-4" />
-          </View>
-        ))}
-      </View>
-    </CardContainer>
-  );
-
-  // Skeleton para productos
-  const ProductsSkeleton = () => (
-    <CardContainer>
-      <View className="px-4 pt-4 pb-2">
-        <View className="flex-row items-center mb-3">
-          <View className="w-5 h-5 bg-gray-300 rounded animate-pulse" />
-          <TextSkeleton width="w-32" height="h-5" className="ml-2" />
-        </View>
-        <TextSkeleton width="w-24" height="h-3" className="mb-3" />
-      </View>
-      
-      <View className="px-4 pb-4">
-        {Array.from({ length: 2 }).map((_, index) => (
-          <View key={index} className="bg-white border border-gray-200 rounded-lg p-4 mb-3">
-            <View className="flex-row">
-              {/* Imagen del producto */}
-              <View className="w-16 h-16 bg-gray-300 rounded-lg animate-pulse" />
-              
-              {/* Información del producto */}
-              <View className="flex-1 ml-4">
-                <TextSkeleton width="w-3/4" height="h-4" className="mb-2" />
-                <TextSkeleton width="w-full" height="h-3" className="mb-2" />
-                <TextSkeleton width="w-1/2" height="h-3" />
-              </View>
-              
-              {/* Precio */}
-              <View className="items-end">
-                <TextSkeleton width="w-16" height="h-5" />
-              </View>
-            </View>
-          </View>
-        ))}
-        
-        {/* Botón skeleton */}
-        <View className="bg-gray-200 rounded-xl py-3 flex-row items-center justify-center animate-pulse">
-          <View className="w-5 h-5 bg-gray-300 rounded animate-pulse" />
-          <TextSkeleton width="w-32" height="h-4" className="ml-2" />
-          <View className="w-5 h-5 bg-gray-300 rounded animate-pulse ml-2" />
-        </View>
-      </View>
-    </CardContainer>
-  );
-
-  // ==================== LÓGICA EXISTENTE ====================
 
   // Obtener proveedor y sus productos al cargar el componente
   useEffect(() => {
@@ -312,8 +161,6 @@ const ProviderDetailScreen = () => {
     );
   }
 
-  // ==================== RENDERIZADO ====================
-
   return (
     <SafeAreaView className='flex-1 bg-gray-100'>
       <ScrollView 
@@ -322,16 +169,13 @@ const ProviderDetailScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Header con imagen de fondo y logo */}
-        {loadingProvider ? (
-          <ProviderHeaderSkeleton />
-        ) : provider ? (
-          <ProviderHeader
-            backgroundImage={provider.image}
-            logoImage={provider.image}
-            providerName={provider.name}
-            height={showCatalog ? 200 : 250}
-          />
-        ) : null}
+        <ProviderHeader
+          backgroundImage={provider?.image || ''}
+          logoImage={provider?.image || ''}
+          providerName={provider?.name || ''}
+          height={showCatalog ? 200 : 250}
+          isLoading={loadingProvider}
+        />
         
         {showCatalog ? (
           /* ========== VISTA DE CATÁLOGO COMPLETO ========== */
@@ -348,7 +192,13 @@ const ProviderDetailScreen = () => {
           >
             {/* Información reducida del proveedor */}
             {loadingProvider ? (
-              <ProviderInfoSkeleton />
+              <ProviderInfo
+                name=""
+                industry=""
+                address=""
+                tags={[]}
+                isLoading={true}
+              />
             ) : provider ? (
               <View style={{ paddingTop: 60, paddingHorizontal: 16, paddingBottom: 16 }}>
                 <Text className='text-2xl font-bold text-gray-900 text-center mb-2'>
@@ -447,57 +297,48 @@ const ProviderDetailScreen = () => {
                 zIndex: 1,
               }}
             >
-              {loadingProvider ? (
-                <ProviderInfoSkeleton />
-              ) : provider ? (
-                <View style={{ paddingTop: 60, paddingHorizontal: 16, paddingBottom: 16 }}>
-                  <ProviderInfo
-                    name={provider.name}
-                    industry={provider.props.industry}
-                    address={provider.props.tax_address}
-                    tags={provider.tags}
-                  />
-                </View>
-              ) : null}
+              {/* Información básica del proveedor */}
+              <View style={{ paddingTop: 60, paddingHorizontal: 16, paddingBottom: 16 }}>
+                <ProviderInfo
+                  name={provider?.name || ''}
+                  industry={provider?.props.industry || ''}
+                  address={provider?.props.tax_address || ''}
+                  tags={provider?.tags || []}
+                  isLoading={loadingProvider}
+                />
+              </View>
               
               {/* Botones de acción */}
-              {loadingProvider ? (
-                <ActionButtonsSkeleton />
-              ) : provider ? (
-                <ActionButtons 
-                  phone={provider.props.phone_number}
-                  email={provider.props.email}
-                />
-              ) : null}
+              <ActionButtons 
+                phone={provider?.props.phone_number}
+                email={provider?.props.email}
+                isLoading={loadingProvider}
+              />
             </CardContainer>
 
             {/* Descripción */}
-            {loadingProvider ? (
-              <DescriptionSkeleton />
-            ) : provider ? (
-              <CardContainer>
-                <DescriptionSection
-                  title="Descripción"
-                  description={provider.description?.trim() || 
-                    `${provider.name} es una empresa especializada en ${provider.props.industry.toLowerCase()}. ` +
-                    `Ubicada en ${provider.props.tax_address}, ofrecemos productos y servicios de calidad para satisfacer ` +
-                    `las necesidades de nuestros clientes. Contamos con amplia experiencia en el sector y un equipo ` +
-                    `profesional comprometido con la excelencia.`}
-                  maxLines={4}
-                />
-              </CardContainer>
-            ) : null}
+            <CardContainer>
+              <DescriptionSection
+                title="Descripción"
+                description={provider?.description?.trim() || 
+                  `${provider?.name || ''} es una empresa especializada en ${provider?.props.industry?.toLowerCase() || ''}. ` +
+                  `Ubicada en ${provider?.props.tax_address || ''}, ofrecemos productos y servicios de calidad para satisfacer ` +
+                  `las necesidades de nuestros clientes. Contamos con amplia experiencia en el sector y un equipo ` +
+                  `profesional comprometido con la excelencia.`}
+                maxLines={4}
+                isLoading={loadingProvider}
+              />
+            </CardContainer>
 
             {/* Información de contacto */}
-            {loadingProvider ? (
-              <ContactInfoSkeleton />
-            ) : provider ? (
-              <CardContainer>
-                <SectionHeader
-                  title="Información de Contacto"
-                  icon="card-account-details"
-                />
-                
+            <CardContainer>
+              <SectionHeader
+                title="Información de Contacto"
+                icon="card-account-details"
+                isLoading={loadingProvider}
+              />
+              
+              {!loadingProvider && provider ? (
                 <View className='px-4 pb-4'>
                   <View className='flex-row justify-between items-center py-3 border-b border-gray-100'>
                     <Text className='text-gray-600 font-medium'>Razón Social</Text>
@@ -520,64 +361,70 @@ const ProviderDetailScreen = () => {
                     </Text>
                   </View>
                 </View>
-              </CardContainer>
-            ) : null}
+              ) : loadingProvider ? (
+                <View className='px-4 pb-4'>
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <View key={index} className='flex-row justify-between items-center py-3 border-b border-gray-100'>
+                      <View className='w-24 h-4 bg-gray-300 rounded animate-pulse' />
+                      <View className='w-32 h-4 bg-gray-300 rounded animate-pulse' />
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </CardContainer>
 
             {/* Productos principales */}
-            {loadingProvider ? (
-              <ProductsSkeleton />
-            ) : provider ? (
-              <CardContainer>
-                <SectionHeader
-                  title="Productos principales"
-                  subtitle={`${products?.items?.length || 0} productos disponibles`}
-                  icon="shopping"
-                />
-                
-                {loadingProducts ? (
-                  <View className='px-4 py-8'>
-                    <ActivityIndicator size="small" color="#2563EB" />
-                    <Text className='text-gray-500 text-center mt-2'>Cargando productos...</Text>
-                  </View>
-                ) : products?.items?.length ? (
-                  <View>
-                    <View className='px-4 pb-4'>
-                      {products.items.slice(0, 2).map((product) => (
-                        <ProductCard
-                          key={product._id}
-                          product={product}
-                          variant="list"
-                          onPress={(product) => {
-                            console.log('Producto seleccionado:', product.name);
-                          }}
-                        />
-                      ))}
-                    </View>
-                    
-                    <View className='px-4 pb-4'>
-                      <TouchableOpacity
-                        className='bg-blue-600 rounded-xl py-3 flex-row items-center justify-center'
-                        activeOpacity={0.8}
-                        onPress={() => {
-                          console.log('Mostrar catálogo completo del proveedor:', provider.name);
-                          showCatalogView();
+            <CardContainer>
+              <SectionHeader
+                title="Productos principales"
+                subtitle={`${products?.items?.length || 0} productos disponibles`}
+                icon="shopping"
+                isLoading={loadingProvider}
+              />
+              
+              {loadingProducts ? (
+                <View className='px-4 py-8'>
+                  <ActivityIndicator size="small" color="#2563EB" />
+                  <Text className='text-gray-500 text-center mt-2'>Cargando productos...</Text>
+                </View>
+              ) : products?.items?.length ? (
+                <View>
+                  <View className='px-4 pb-4'>
+                    {products.items.slice(0, 2).map((product) => (
+                      <ProductCard
+                        key={product._id}
+                        product={product}
+                        variant="list"
+                        onPress={(product) => {
+                          console.log('Producto seleccionado:', product.name);
                         }}
-                      >
-                        <MaterialCommunityIcons name="shopping" size={20} color="white" />
-                        <Text className='text-white font-bold ml-2'>Ver catálogo completo</Text>
-                        <MaterialCommunityIcons name="chevron-right" size={20} color="white" />
-                      </TouchableOpacity>
-                    </View>
+                      />
+                    ))}
                   </View>
-                ) : (
-                  <View className='px-4 py-8'>
-                    <Text className='text-gray-500 text-center'>
-                      Este proveedor no tiene productos disponibles
-                    </Text>
+                  
+                  <View className='px-4 pb-4'>
+                    <TouchableOpacity
+                      className='bg-blue-600 rounded-xl py-3 flex-row items-center justify-center'
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        console.log('Mostrar catálogo completo del proveedor:', provider?.name);
+                        showCatalogView();
+                      }}
+                    >
+                      <MaterialCommunityIcons name="shopping" size={20} color="white" />
+                      <Text className='text-white font-bold ml-2'>Ver catálogo completo</Text>
+                      <MaterialCommunityIcons name="chevron-right" size={20} color="white" />
+                    </TouchableOpacity>
                   </View>
-                )}
-              </CardContainer>
-            ) : null}
+                </View>
+              ) : (
+                <View className='px-4 py-8'>
+                  <Text className='text-gray-500 text-center'>
+                    Este proveedor no tiene productos disponibles
+                  </Text>
+                </View>
+              )}
+            </CardContainer>
           </>
         )}
 

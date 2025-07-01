@@ -3,7 +3,6 @@ import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import ProviderCard from '../../../components/ProviderComponent/ProviderCard';
 import GenericList from '../../../components/genericList';
 import Header from '../../../components/header';
-import NavBar from '../../../components/navBar';
 import SearchBar from '../../../components/searchBar';
 import usefetch from "../../../hooks/useFetch";
 import { getProviders } from '../../../utils/queryProv';
@@ -255,9 +254,6 @@ const Index = () => {
       <View style={styles.container}>
         {renderScreen()}
       </View>
-      <NavBar 
-        activeScreen={activeScreen}
-      />
     </SafeAreaView>
   );
 };

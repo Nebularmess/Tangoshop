@@ -6,13 +6,23 @@ interface ActionButtonsProps {
   phone?: string;
   email?: string;
   website?: string;
+  isLoading?: boolean;
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({
   phone,
   email,
-  website
+  website,
+  isLoading = false
 }) => {
+  // Skeleton para botones
+  const ButtonSkeleton: React.FC<{ isFullWidth?: boolean }> = ({ isFullWidth = false }) => (
+    <View className={`${isFullWidth ? 'w-full' : 'flex-1'} bg-gray-300 rounded-xl py-4 flex-row items-center justify-center animate-pulse`}>
+      <View className="w-5 h-5 bg-gray-400 rounded animate-pulse" />
+      <View className="w-16 h-4 bg-gray-400 rounded ml-2 animate-pulse" />
+    </View>
+  );
+
   const handleCall = () => {
     if (phone) {
       Linking.openURL(`tel:${phone}`);
@@ -36,6 +46,21 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
       Alert.alert('Email no disponible', 'Este proveedor no tiene email registrado.');
     }
   };
+
+  if (isLoading) {
+    return (
+      <View className='px-4 py-3'>
+        <View className='flex-row space-x-3'>
+          <ButtonSkeleton />
+          <ButtonSkeleton />
+        </View>
+        {/* Email button skeleton siempre visible durante loading */}
+        <View className='mt-3'>
+          <ButtonSkeleton isFullWidth />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View className='px-4 py-3'>

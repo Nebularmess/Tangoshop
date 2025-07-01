@@ -5,18 +5,22 @@ interface DescriptionSectionProps {
   title: string;
   description: string;
   maxLines?: number;
+  isLoading?: boolean;
 }
 
 const DescriptionSection: React.FC<DescriptionSectionProps> = ({
   title,
   description,
-  maxLines = 3
+  maxLines = 3,
+  isLoading = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showReadMore, setShowReadMore] = useState(false);
 
-  // Debug log para verificar qué descripción llega
-  console.log('🔍 DescriptionSection recibió:', { title, description: description?.substring(0, 50) + '...' });
+  // Skeleton para líneas de texto
+  const TextLineSkeleton: React.FC<{ width?: string }> = ({ width = 'w-full' }) => (
+    <View className={`${width} h-4 bg-gray-300 rounded animate-pulse mb-2`} />
+  );
 
   const handleTextLayout = (event: any) => {
     const { lines } = event.nativeEvent;
@@ -25,10 +29,31 @@ const DescriptionSection: React.FC<DescriptionSectionProps> = ({
     }
   };
 
+  if (isLoading) {
+    return (
+      <View className='px-4 py-3'>
+        {/* Título skeleton */}
+        <View className='w-32 h-5 bg-gray-300 rounded animate-pulse mb-3' />
+        
+        {/* Líneas de descripción skeleton */}
+        <TextLineSkeleton />
+        <TextLineSkeleton />
+        <TextLineSkeleton />
+        <TextLineSkeleton width='w-3/4' />
+        
+        {/* Botón "Ver más" skeleton */}
+        <View className='w-20 h-4 bg-gray-300 rounded animate-pulse mt-2' />
+      </View>
+    );
+  }
+
   // Si no hay descripción, no mostrar el componente
   if (!description || description.trim().length === 0) {
     return null;
   }
+
+  // Debug log para verificar qué descripción llega
+  console.log('🔍 DescriptionSection recibió:', { title, description: description?.substring(0, 50) + '...' });
 
   return (
     <View className='px-4 py-3'>
